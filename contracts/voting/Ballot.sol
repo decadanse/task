@@ -70,10 +70,8 @@ contract Ballot {
         // require(seed.FunderPortfolio.fundingAmount(owner) >= seed.fundingCollected());
         // require(seed.calculateClaim(owner) >= seed.fundingCollected());
         // require(seed.calculateClaim(owner) >= seed.fundingCollected()); //base
-        require(
-            seed.calculateClaim(owner) / 100 >=
-                (seed.fundingCollected() / 100) * 51
-        );
+        
+        require(seed.calculateClaim(owner) >= (seed.fundingCollected() / 100) * 51);
 
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
