@@ -16,7 +16,7 @@ describe("Voting dApp", function () {
     let voters;
 
     let Voting;
-    let NFTVoting;
+    let BallotVoting;
 
 
 //https://stackoverflow.com/questions/70553717/error-trying-to-obtain-set-of-fields-from-array-of-solidity-objects
@@ -32,7 +32,7 @@ describe("Voting dApp", function () {
         //linking the contract ABI
         Voting = await ethers.getContractFactory("Ballot");
 
-        NFTVoting = await Voting.deploy(proposalNames);
+        BallotVoting  = await Voting.deploy(proposalNames);
 
         //deconstructing array into owner, candidates and voters
         //signers returns an array of 20 signers on the hardhat testing node
@@ -40,14 +40,14 @@ describe("Voting dApp", function () {
         [owner, cand1, cand2, cand3, voter1, voter2, voter3, ...voters] = await ethers.getSigners();
 
         //giveRightToVote three candidates
-        await NFTVoting.giveRightToVote(cand1.address);
-        await NFTVoting.giveRightToVote(cand2.address);
-        await NFTVoting.giveRightToVote(cand3.address);
+        await BallotVoting.giveRightToVote(cand1.address);
+        await BallotVoting.giveRightToVote(cand2.address);
+        await BallotVoting.giveRightToVote(cand3.address);
 
         //vote three ballots
-        await NFTVoting.vote(1);
-        // await NFTVoting.vote(2);
-        // await NFTVoting.vote(3);
+        await BallotVoting.vote(1);
+        // await BallotVoting.vote(2);
+        // await BallotVoting.vote(3);
 
     }
     );
@@ -60,11 +60,11 @@ describe("Voting dApp", function () {
 
     describe("safeMint, safeMintMany", function () {
         it("Minting a ballot and transfering it to an address on the network", async function () {
-            expect(await NFTVoting.balanceOf(voter1.address)).to.equal(1);
+            expect(await BallotVoting.balanceOf(voter1.address)).to.equal(1);
         });
 
         it("Attempting to send a voter a ballot twice", async function () {
-            await expect(NFTVoting.vote(1)).to.be.revertedWith("The voter already voted.");
+            await expect(BallotVoting.vote(1)).to.be.revertedWith("The voter already voted.");
         });
 
         it("Testing safeMintMany", async function () {
@@ -74,10 +74,10 @@ describe("Voting dApp", function () {
                 addresses[i] = voters[i].address
             }
 
-            NFTVoting.safeMintMany(addresses)
+            BallotVoting.safeMintMany(addresses)
 
             for (let i = 0; i < voters.length; i++) {
-                expect(await NFTVoting.balanceOf(addresses[0])).to.equal(1);
+                expect(await BallotVoting.balanceOf(addresses[0])).to.equal(1);
             }
         });
     });
@@ -85,31 +85,31 @@ describe("Voting dApp", function () {
 
     describe("Adding Candidates", function () {
         it("Checking if a candidate exists", async function () {
-            expect(await NFTVoting.candidates(0)).to.equal(cand1.address);
+            expect(await BallotVoting.candidates(0)).to.equal(cand1.address);
         });
 
         it("Attempting to add an existing candidate", async function () {
-            await expect(NFTVoting.addCandidates(cand1.address)).to.be.revertedWith("Candidate Exists");
+            await expect(BallotVoting.addCandidates(cand1.address)).to.be.revertedWith("Candidate Exists");
         });
     });
 
 
     describe("Voting", function () {
         it("Placing a valid vote for a candidate", async function () {
-            await NFTVoting.connect(voter1).vote(cand1.address);
-            expect(await NFTVoting.votesForCandidate(cand1.address)).to.equal(1);
+            await BallotVoting.connect(voter1).vote(cand1.address);
+            expect(await BallotVoting.votesForCandidate(cand1.address)).to.equal(1);
         });
         -
             it("Failed vote without a ballot", async function () {
-                await NFTVoting.connect(voter1).vote(cand1.address);
+                await BallotVoting.connect(voter1).vote(cand1.address);
 
-                await expect(NFTVoting.connect(voter1).vote(cand1.address)).to.be.revertedWith("No Ballots");
+                await expect(BallotVoting.connect(voter1).vote(cand1.address)).to.be.revertedWith("No Ballots");
             });
 
         it("Failed vote after election has concluded", async function () {
 
-            await NFTVoting.conclude()
-            await expect(NFTVoting.connect(voter1).vote(cand1.address)).to.be.revertedWith("Concluded");
+            await BallotVoting.conclude()
+            await expect(BallotVoting.connect(voter1).vote(cand1.address)).to.be.revertedWith("Concluded");
         });
 
 
@@ -119,29 +119,29 @@ describe("Voting dApp", function () {
     //Testing the conlude function
     describe("conclude()", function () {
         it("Checking if active status is changed to false", async function () {
-            await NFTVoting.connect(voter1).vote(cand1.address);
-            await NFTVoting.connect(voter2).vote(cand2.address);
-            await NFTVoting.connect(voter3).vote(cand2.address);
-            await NFTVoting.conclude();
+            await BallotVoting.connect(voter1).vote(cand1.address);
+            await BallotVoting.connect(voter2).vote(cand2.address);
+            await BallotVoting.connect(voter3).vote(cand2.address);
+            await BallotVoting.conclude();
 
-            expect(await NFTVoting.active()).to.equal(false);
+            expect(await BallotVoting.active()).to.equal(false);
         });
 
         it("Correct winner is declared", async function () {
-            await NFTVoting.connect(voter1).vote(cand1.address);
-            await NFTVoting.connect(voter2).vote(cand2.address);
-            await NFTVoting.connect(voter3).vote(cand2.address);
-            await NFTVoting.conclude();
+            await BallotVoting.connect(voter1).vote(cand1.address);
+            await BallotVoting.connect(voter2).vote(cand2.address);
+            await BallotVoting.connect(voter3).vote(cand2.address);
+            await BallotVoting.conclude();
 
-            expect(await NFTVoting.winner()).to.equal(cand2.address);
+            expect(await BallotVoting.winner()).to.equal(cand2.address);
         });
 
         it("Draw scenario", async function () {
-            await NFTVoting.connect(voter1).vote(cand1.address);
-            await NFTVoting.connect(voter2).vote(cand2.address);
-            await NFTVoting.conclude();
+            await BallotVoting.connect(voter1).vote(cand1.address);
+            await BallotVoting.connect(voter2).vote(cand2.address);
+            await BallotVoting.conclude();
 
-            expect(await NFTVoting.winner()).to.equal("0x0000000000000000000000000000000000000000");
+            expect(await BallotVoting.winner()).to.equal("0x0000000000000000000000000000000000000000");
         });
     });
 });
