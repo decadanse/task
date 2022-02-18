@@ -43,7 +43,7 @@ contract Ballot {
     /// Create a new ballot to choose one of `proposalNames`.
     constructor(bytes32[] memory proposalNames) {
         chairperson = msg.sender;
-        voters[chairperson].weight = seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
+        voters[chairperson].weight = seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
 
         // For each of the provided proposal names,
         // create a new proposal object and add it
@@ -93,7 +93,7 @@ contract Ballot {
           // function recover(GnosisSafe safe) external
           rkmc.setup(owner);
           rkmc.remover(forRemOwner);
-      }
+    }
 
     // Give `voter` the right to vote on this ballot.
     // May only be called by `chairperson`.
