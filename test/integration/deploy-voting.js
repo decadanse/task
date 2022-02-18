@@ -1,6 +1,36 @@
 const { expect } = require("chai")
 const { ethers } = require("hardhat")
-const { api } = require("./utils/gnosis.js");
+// const { api } = require("./utils/gnosis.js");
+// const { lbp } = require("./deploy-lbp.js");
+// const { seed } = require("./deploy-seed.js");
+const { constants } = require("@openzeppelin/test-helpers");
+const init = require("../test-init.js");
+
+const deploy = async () => {
+  const setup = await init.initialize(await ethers.getSigners());
+
+  setup.gnosisSafe = await init.getContractInstance(
+    "GnosisSafe",
+    setup.roles.prime
+  );
+
+  setup.proxySafe = await init.getGnosisProxyInstance(setup);
+
+  setup.seedFactory = await init.getContractInstance(
+    "SeedFactory",
+    setup.roles.prime
+  );
+
+  setup.seed = await init.getContractInstance("Seed", setup.roles.prime);
+
+  await setup.seedFactory
+    .connect(setup.roles.prime)
+    .setMasterCopy(setup.seed.address);
+
+  setup.data = {};
+
+  return setup;
+};
 
 
 
@@ -26,14 +56,19 @@ describe("Voting dApp", function () {
                            ethers.utils.formatBytes32String("Proposal_2"),
                            ethers.utils.formatBytes32String("Proposal_3")];
 
+    // const setup = await init.initialize(await ethers.getSigners());
+    // setup.seed = await init.getContractInstance("Seed", setup.roles.prime);
+
     //beforeEach will be executed before every unit test
 
     beforeEach(async function () {
 
+        setup = await deploy();
+
         //linking the contract ABI
         Voting = await ethers.getContractFactory("Ballot");
 
-        BallotVoting  = await Voting.deploy(proposalNames); //error here in Ballot.sol
+        BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); //error here in Ballot.sol
 
         //deconstructing array into owner, candidates and voters
         //signers returns an array of 20 signers on the hardhat testing node

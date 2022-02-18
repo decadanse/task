@@ -12,7 +12,7 @@ import "./SampleModule.sol";
 
 /// @title Voting with delegation.
 contract Ballot {
-    Seed seed;
+    Seed public seed;
     RecoveryKeyModule rkmc;
     // ILBP public lbp; // Address of LBP that is managed by this contract.
     // This declares a new complex type which will
@@ -41,9 +41,9 @@ contract Ballot {
     Proposal[] public proposals;
 
     /// Create a new ballot to choose one of `proposalNames`.
-    constructor(bytes32[] memory proposalNames) {
+    constructor(bytes32[] memory proposalNames, Seed _seed) {
         chairperson = msg.sender;
-        voters[chairperson].weight = seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
+        voters[chairperson].weight = _seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
 
         // For each of the provided proposal names,
         // create a new proposal object and add it
