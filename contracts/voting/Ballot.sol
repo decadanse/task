@@ -8,6 +8,7 @@ pragma solidity 0.8.9;
 import "../seed/Seed.sol"; //need this
 import "../utils/interface/ILBP.sol";
 import "./SampleModule.sol";
+// import "../utils/interface/Safe.sol";
 
 /// @title Voting with delegation.
 contract Ballot {
@@ -70,7 +71,7 @@ contract Ballot {
         // require(seed.FunderPortfolio.fundingAmount(owner) >= seed.fundingCollected());
         // require(seed.calculateClaim(owner) >= seed.fundingCollected());
         // require(seed.calculateClaim(owner) >= seed.fundingCollected()); //base
-        
+
         require(seed.calculateClaim(owner) >= (seed.fundingCollected() / 100) * 51);
 
         // Owner address cannot be null, the sentinel or the Safe itself.

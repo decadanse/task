@@ -1,5 +1,5 @@
-// const ERC20 = artifacts.require('ERC20Mock');
-// const ControllerCreator = artifacts.require('./ControllerCreator.sol');
+// const ERC20 = artifacts.require('CustomERC20Mock');
+// // const ControllerCreator = artifacts.require('./ControllerCreator.sol');
 // const DaoCreator = artifacts.require('./DaoCreator.sol');
 // const DAOTracker = artifacts.require('./DAOTracker.sol');
 // const GenericScheme = artifacts.require('GenericScheme');
@@ -8,22 +8,22 @@
 // const DAOToken = artifacts.require('./DAOToken.sol');
 // const Reputation = artifacts.require('./Reputation.sol');
 // const AbsoluteVote = artifacts.require('./AbsoluteVote.sol');
-// const LockingToken4Reputation = artifacts.require('./LockingToken4Reputation.sol');
+// const LockingToken4Reputation = artifacts.require('./Reputation.sol');
 // const PriceOracle = artifacts.require('./PriceOracle.sol');
 // const FarmFactory = artifacts.require('./FarmFactory.sol');
 // const SeedFactory = artifacts.require('./SeedFactory.sol');
 // const Seed = artifacts.require('./Seed.sol');
 // // Balancer imports
 // const ConfigurableRightsPool = artifacts.require('ConfigurableRightsPool');
-// const BPool = artifacts.require('BPool');
-// const BFactory = artifacts.require('BFactory');
-// const CRPFactory = artifacts.require('CRPFactory');
-// const BalancerSafeMath = artifacts.require('BalancerSafeMath');
-// const RightsManager = artifacts.require('RightsManager');
-// const SmartPoolManager = artifacts.require('SmartPoolManager');
-// const BalancerProxy = artifacts.require('BalancerProxy');
+// const BPool = artifacts.require('ILBP');
+// const BFactory = artifacts.require('ILBPFactory');
+// // const CRPFactory = artifacts.require('CRPFactory');
+// // const BalancerSafeMath = artifacts.require('BalancerSafeMath');
+// // const RightsManager = artifacts.require('RightsManager');
+// // const SmartPoolManager = artifacts.require('SmartPoolManager');
+// const BalancerProxy = artifacts.require('Imports');
 // const PrimeToken = artifacts.require('PrimeToken');
-// const RepRedeemer = artifacts.require('RepRedeemer');
+// // const RepRedeemer = artifacts.require('RepRedeemer');
 
 // const { time, constants } = require('@openzeppelin/test-helpers');
 // // Incentives imports

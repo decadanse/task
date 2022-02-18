@@ -1,8 +1,10 @@
-//https://gist.github.com/rmeissner/208e35db13d0ebf53b6e35838f1c8122
+// //https://gist.github.com/rmeissner/208e35db13d0ebf53b6e35838f1c8122
 pragma solidity 0.8.9;
 
-// import "../test/Imports.sol"; //if uncomment --> errors about already declared identifier
+// // import "../test/Imports.sol"; //if uncomment --> errors about already declared identifier
 import "../utils/interface/Safe.sol";
+import "../utils/SignerV2.sol";
+import "@gnosis.pm/safe-contracts/contracts/base/OwnerManager.sol";
 
 // contract Enum {
 //     enum Operation {
@@ -11,35 +13,39 @@ import "../utils/interface/Safe.sol";
 //     }
 // }
 
-contract MasterCopy {
-    event ChangedMasterCopy(address masterCopy);
 
-    // masterCopy always needs to be first declared variable, to ensure that it is at the same location as in the Proxy contract.
-    // It should also always be ensured that the address is stored alone (uses a full word)
-    address private masterCopy;
+//SignerV2 functional
+// (from SignerV2) function setSafe(address _safe);
 
-    modifier authorized() virtual {
-        require(
-            msg.sender == address(this),
-            "Method can only be called from this contract"
-        );
-        _;
-    }
+// contract MasterCopy {
+//     event ChangedMasterCopy(address masterCopy);
 
-    /// @dev Allows to upgrade the contract. This can only be done via a Safe transaction.
-    /// @param _masterCopy New contract address.
-    function changeMasterCopy(address _masterCopy) public authorized {
-        // Master copy address cannot be null.
-        require(
-            _masterCopy != address(0),
-            "Invalid master copy address provided"
-        );
-        masterCopy = _masterCopy;
-        emit ChangedMasterCopy(_masterCopy);
-    }
-}
+//     // masterCopy always needs to be first declared variable, to ensure that it is at the same location as in the Proxy contract.
+//     // It should also always be ensured that the address is stored alone (uses a full word)
+//     address private masterCopy;
 
-interface GnosisSafe {
+//     modifier authorized() virtual {
+//         require(
+//             msg.sender == address(this),
+//             "Method can only be called from this contract"
+//         );
+//         _;
+//     }
+
+//     /// @dev Allows to upgrade the contract. This can only be done via a Safe transaction.
+//     /// @param _masterCopy New contract address.
+//     function changeMasterCopy(address _masterCopy) public authorized {
+//         // Master copy address cannot be null.
+//         require(
+//             _masterCopy != address(0),
+//             "Invalid master copy address provided"
+//         );
+//         masterCopy = _masterCopy;
+//         emit ChangedMasterCopy(_masterCopy);
+//     }
+// }
+
+interface GnosisSafeVV2 is Safe{
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
     /// @param to Destination address of module transaction.
     /// @param value Ether value of module transaction.
@@ -65,25 +71,25 @@ interface GnosisSafe {
     ) external returns (bool success, bytes memory returnData);
 }
 
-// Module type
-// Single Instance module (each safe has it's own module)
-// Centralized module (all safes use the same module)
+// // Module type
+// // Single Instance module (each safe has it's own module)
+// // Centralized module (all safes use the same module)
 
-contract RecoveryKeyModule is MasterCopy {
-    GnosisSafe public safe;
+contract RecoveryKeyModule{ //MasterCopy {
+    GnosisSafeVV2 public safe;
     address public recoverer;
 
-    modifier authorized() override {
-        require(
-            msg.sender == address(safe),
-            "Method can only be called from this contract"
-        );
-        _;
-    }
+    // modifier authorized() {//override {
+    //     require(
+    //         msg.sender == address(safe),
+    //         "Method can only be called from this contract"
+    //     );
+    //     _;
+    // }
 
     function setup(address _recoverer) public {
         require(address(safe) == address(0), "Module has already been setup");
-        safe = GnosisSafe(msg.sender);
+        safe = GnosisSafeVV2(msg.sender);
         recoverer = _recoverer;
     }
 
@@ -104,16 +110,16 @@ contract RecoveryKeyModule is MasterCopy {
     }
 }
 
-/*
-To deploy run following js (web3js 0.4.x):
-let moduleSetupData = await recoveryModuleMasterCopy.contract.setup.getData()
-let moduleCreationData = await proxyFactory.contract.createProxy.getData(recoveryModuleMasterCopy.address, moduleSetupData)
-// see https://github.com/gnosis/safe-contracts/blob/development/test/utils/general.js#L9
-let enableModuleParameterData = utils.createAndAddModulesData([moduleCreationData])
-let enableModuleData = createAndAddModules.contract.createAndAddModules.getData(proxyFactory.address, enableModuleParameterData)
-// generate sigs
-let tx = await gnosisSafe.execTransaction(createAndAddModules.address, 0, enableModuleData, DelegateCall, 0, 0, 0, 0, 0, sigs)
-*/
+// /*
+// To deploy run following js (web3js 0.4.x):
+// let moduleSetupData = await recoveryModuleMasterCopy.contract.setup.getData()
+// let moduleCreationData = await proxyFactory.contract.createProxy.getData(recoveryModuleMasterCopy.address, moduleSetupData)
+// // see https://github.com/gnosis/safe-contracts/blob/development/test/utils/general.js#L9
+// let enableModuleParameterData = utils.createAndAddModulesData([moduleCreationData])
+// let enableModuleData = createAndAddModules.contract.createAndAddModules.getData(proxyFactory.address, enableModuleParameterData)
+// // generate sigs
+// let tx = await gnosisSafe.execTransaction(createAndAddModules.address, 0, enableModuleData, DelegateCall, 0, 0, 0, 0, 0, sigs)
+// */
 
 contract RecoveryKeyModuleCentral {
     mapping(address => address) recoverers;
@@ -122,7 +128,7 @@ contract RecoveryKeyModuleCentral {
         recoverers[msg.sender] = recoverer;
     }
 
-    function recover(GnosisSafe safe) external {
+    function recover(GnosisSafeVV2 safe) external {
         // add additionalOwner as owner and set threshold to 1
         address recoverer = recoverers[address(safe)];
         require(msg.sender == recoverer, "You are not allowed to do that");
@@ -140,12 +146,12 @@ contract RecoveryKeyModuleCentral {
     }
 }
 
-/*
-To deploy run following js (web3js 0.4.x):
-let moduleSetupData = await recoveryModule.contract.register.getData(recoverer)
-// generate sigs
-let tx = await gnosisSafe.execTransaction(recoveryModule.address, 0, moduleSetupData, Call, 0, 0, 0, 0, 0, sigs)
-let enableModuleData = gnosisSafe.contract.enableModule.getData(recoveryModule.address)
-// generate sigs
-let tx = await gnosisSafe.execTransaction(gnosisSafe.address, 0, enableModuleData, Call, 0, 0, 0, 0, 0, sigs)
-*/
+// /*
+// To deploy run following js (web3js 0.4.x):
+// let moduleSetupData = await recoveryModule.contract.register.getData(recoverer)
+// // generate sigs
+// let tx = await gnosisSafe.execTransaction(recoveryModule.address, 0, moduleSetupData, Call, 0, 0, 0, 0, 0, sigs)
+// let enableModuleData = gnosisSafe.contract.enableModule.getData(recoveryModule.address)
+// // generate sigs
+// let tx = await gnosisSafe.execTransaction(gnosisSafe.address, 0, enableModuleData, Call, 0, 0, 0, 0, 0, sigs)
+// */
