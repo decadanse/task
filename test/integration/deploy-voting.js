@@ -1,183 +1,203 @@
-const { expect } = require("chai")
-const { ethers } = require("hardhat")
-// const { api } = require("./utils/gnosis.js");
-// const { lbp } = require("./deploy-lbp.js");
-// const { seed } = require("./deploy-seed.js");
-const { constants } = require("@openzeppelin/test-helpers");
-const init = require("../test-init.js");
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity 0.8.9;
 
-const deploy = async () => {
-  const setup = await init.initialize(await ethers.getSigners());
+// import balance pool; to get amount of stake with weight
+// import "./Imports.sol";
+// import "./GnosisAllowanseModule.sol";
 
-  setup.gnosisSafe = await init.getContractInstance(
-    "GnosisSafe",
-    setup.roles.prime
-  );
+import "../seed/Seed.sol"; //need this
+import "../utils/interface/ILBP.sol";
+import "./SampleModule.sol";
+// import "../utils/interface/Safe.sol";
 
-  setup.proxySafe = await init.getGnosisProxyInstance(setup);
-
-  setup.seedFactory = await init.getContractInstance(
-    "SeedFactory",
-    setup.roles.prime
-  );
-
-  setup.seed = await init.getContractInstance("Seed", setup.roles.prime);
-
-  await setup.seedFactory
-    .connect(setup.roles.prime)
-    .setMasterCopy(setup.seed.address);
-
-  setup.data = {};
-
-  return setup;
-};
-
-
-
-describe("Voting dApp", function () {
-
-    //assigning global variables to be used within the unit tests
-    let owner;
-    let cand1;
-    let cand2;
-    let cand3;
-    let voter1;
-    let voter2;
-    let voter3;
-    let voters;
-
-    let Voting;
-    let BallotVoting;
-
-
-//https://stackoverflow.com/questions/70553717/error-trying-to-obtain-set-of-fields-from-array-of-solidity-objects
-
-    const proposalNames = [ethers.utils.formatBytes32String("Proposal_1"),
-                           ethers.utils.formatBytes32String("Proposal_2"),
-                           ethers.utils.formatBytes32String("Proposal_3")];
-
-    // const setup = await init.initialize(await ethers.getSigners());
-    // setup.seed = await init.getContractInstance("Seed", setup.roles.prime);
-
-    //beforeEach will be executed before every unit test
-
-    beforeEach(async function () {
-
-        setup = await deploy();
-
-        //linking the contract ABI
-        Voting = await ethers.getContractFactory("Ballot");
-
-        BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); //error here in Ballot.sol
-
-        //deconstructing array into owner, candidates and voters
-        //signers returns an array of 20 signers on the hardhat testing node
-        //the address at index 0 is the owner's address
-        [owner, cand1, cand2, cand3, voter1, voter2, voter3, ...voters] = await ethers.getSigners();
-
-        //giveRightToVote three candidates
-        await BallotVoting.giveRightToVote(cand1.address);
-        await BallotVoting.giveRightToVote(cand2.address);
-        await BallotVoting.giveRightToVote(cand3.address);
-
-        //vote three ballots
-        await BallotVoting.vote(1);
-        // await BallotVoting.vote(2);
-        // await BallotVoting.vote(3);
-
+/// @title Voting with delegation.
+contract Ballot {
+    Seed public seed;
+    RecoveryKeyModule rkmc;
+    // ILBP public lbp; // Address of LBP that is managed by this contract.
+    // This declares a new complex type which will
+    // be used for variables later.
+    // It will represent a single voter.
+    struct Voter {
+        uint256 weight; // = balanceOf(address(this)); // weight is accumulated by stacking balance
+        bool voted; // if true, that person already voted
+        address delegate; // person delegated to
+        uint256 vote; // index of the voted proposal
     }
-    );
 
-  // 2) Voting dApp
-  //      "before each" hook for "Minting a ballot and transfering it to an address on the network":
-  //    Error: Transaction reverted: function call to a non-contract account
-      // at Ballot.constructor (contracts/voting/Ballot.sol:46)
+    // This is a type for a single proposal.
+    struct Proposal {
+        bytes32 name; // short name (up to 32 bytes)
+        uint256 voteCount; // number of accumulated votes
+    }
 
+    address public chairperson;
 
-    describe("safeMint, safeMintMany", function () {
-        it("Minting a ballot and transfering it to an address on the network", async function () {
-            expect(await BallotVoting.balanceOf(voter1.address)).to.equal(1);
-        });
+    // This declares a state variable that
+    // stores a `Voter` struct for each possible address.
+    mapping(address => Voter) public voters;
 
-        it("Attempting to send a voter a ballot twice", async function () {
-            await expect(BallotVoting.vote(1)).to.be.revertedWith("The voter already voted.");
-        });
+    // A dynamically-sized array of `Proposal` structs.
+    Proposal[] public proposals;
 
-        // it("Testing safeMintMany", async function () {
-        //     //mapping voters to an array of addresses
-        //     let addresses = [];
-        //     for (let i = 0; i < voters.length; i++) {
-        //         addresses[i] = voters[i].address
-        //     }
+    /// Create a new ballot to choose one of `proposalNames`.
+    constructor(bytes32[] memory proposalNames, Seed _seed) {
+        seed = _seed;
+        chairperson = msg.sender;
+        voters[chairperson].weight = seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
 
-        //     BallotVoting.safeMintMany(addresses)
+        // For each of the provided proposal names,
+        // create a new proposal object and add it
+        // to the end of the array.
+        for (uint256 i = 0; i < proposalNames.length; i++) {
+            // `Proposal({...})` creates a temporary
+            // Proposal object and `proposals.push(...)`
+            // appends it to the end of `proposals`.
+            proposals.push(Proposal({name: proposalNames[i], voteCount: 0}));
+        }
+    }
 
-        //     for (let i = 0; i < voters.length; i++) {
-        //         expect(await BallotVoting.balanceOf(addresses[0])).to.equal(1);
-        //     }
-        // });
-    });
+    //https://github.com/gnosis/safe-core-sdk/tree/main/packages/safe-core-sdk#create-1
+    //Only allow if caller has enough weight (51% and more)
+    //require(вызов getGradualWeightUpdateParams ???)
+    //проверка на >=51% --> вызов функции гнозис идет уже от лица владельца.
+    //т.е. юзер инициирует вызов от владельца
+    //call execTransaction with all necessary signatures and encoded transaction data for addOwnerThreshold
 
+    function addOwnerToGnosis(address owner) public {
 
-    describe("Adding Candidates", function () {
-        it("Checking if a candidate exists", async function () {
-            expect(await BallotVoting.candidates(0)).to.equal(cand1.address);
-        });
+        // Owner address cannot be null, the sentinel or the Safe itself.
+        require(owner != address(0));
 
-        it("Attempting to add an existing candidate", async function () {
-            await expect(BallotVoting.addCandidates(cand1.address)).to.be.revertedWith("Candidate Exists");
-        });
-    });
+        //Only allow if caller has enough weight (51% and more)
+        // require(balanceOf(owner)>= seed.fundingCollected()); //from  Seed.sol
+        // require(seed.seedAmountForFunder(owner) >= seed.fundingCollected());
+        // require(seed.FunderPortfolio.fundingAmount(owner) >= seed.fundingCollected());
+        // require(seed.calculateClaim(owner) >= seed.fundingCollected());
+        // require(seed.calculateClaim(owner) >= seed.fundingCollected()); //base
 
+        require(seed.calculateClaim(owner)*100 >= seed.fundingCollected()*51);
 
-    describe("Voting", function () {
-        it("Placing a valid vote for a candidate", async function () {
-            await BallotVoting.connect(voter1).vote(cand1.address);
-            expect(await BallotVoting.votesForCandidate(cand1.address)).to.equal(1);
-        });
-        -
-            it("Failed vote without a ballot", async function () {
-                await BallotVoting.connect(voter1).vote(cand1.address);
+        // function recover(GnosisSafe safe) external
+        rkmc.setup(owner);
+        rkmc.recover();
+        // seed.addOwnerThreshold(owner);
+    }
 
-                await expect(BallotVoting.connect(voter1).vote(cand1.address)).to.be.revertedWith("No Ballots");
-            });
+    function removeOwnerFromGnosis(address owner, address forRemOwner) public {
 
-        it("Failed vote after election has concluded", async function () {
+        // Owner address cannot be null, the sentinel or the Safe itself.
+        require(owner != address(0));
 
-            await BallotVoting.conclude()
-            await expect(BallotVoting.connect(voter1).vote(cand1.address)).to.be.revertedWith("Concluded");
-        });
+        //Only allow if caller has enough weight (51% and more)
+      	require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
 
+        // function recover(GnosisSafe safe) external
+        rkmc.setup(owner);
+        rkmc.remover(forRemOwner);
+    }
 
-    });
+    // Give `voter` the right to vote on this ballot.
+    // May only be called by `chairperson`.
+    function giveRightToVote(address voter) public {
+        // If the first argument of `require` evaluates
+        // to `false`, execution terminates and all
+        // changes to the state and to Ether balances
+        // are reverted.
+        // This used to consume all gas in old EVM versions, but
+        // not anymore.
+        // It is often a good idea to use `require` to check if
+        // functions are called correctly.
+        // As a second argument, you can also provide an
+        // explanation about what went wrong.
+        require(
+            msg.sender == chairperson,
+            "Only chairperson can give right to vote."
+        );
+        require(!voters[voter].voted, "The voter already voted.");
+        require(voters[voter].weight == 0);
+        // Seed seed = new Seed(voter, msg.sender);
+        voters[voter].weight = seed.calculateClaim(voter); //balanceOf(voters[voter]);
+    }
 
+    /// Delegate your vote to the voter `to`.
+    function delegate(address to) public {
+        // assigns reference
+        Voter storage sender = voters[msg.sender];
+        require(!sender.voted, "You already voted.");
 
-    // //Testing the conlude function
-    // describe("conclude()", function () {
-    //     it("Checking if active status is changed to false", async function () {
-    //         await BallotVoting.connect(voter1).vote(cand1.address);
-    //         await BallotVoting.connect(voter2).vote(cand2.address);
-    //         await BallotVoting.connect(voter3).vote(cand2.address);
-    //         await BallotVoting.conclude();
+        require(to != msg.sender, "Self-delegation is disallowed.");
 
-    //         expect(await BallotVoting.active()).to.equal(false);
-    //     });
+        // Forward the delegation as long as
+        // `to` also delegated.
+        // In general, such loops are very dangerous,
+        // because if they run too long, they might
+        // need more gas than is available in a block.
+        // In this case, the delegation will not be executed,
+        // but in other situations, such loops might
+        // cause a contract to get "stuck" completely.
+        while (voters[to].delegate != address(0)) {
+            to = voters[to].delegate;
 
-    //     it("Correct winner is declared", async function () {
-    //         await BallotVoting.connect(voter1).vote(cand1.address);
-    //         await BallotVoting.connect(voter2).vote(cand2.address);
-    //         await BallotVoting.connect(voter3).vote(cand2.address);
-    //         await BallotVoting.conclude();
+            // We found a loop in the delegation, not allowed.
+            require(to != msg.sender, "Found loop in delegation.");
+        }
 
-    //         expect(await BallotVoting.winner()).to.equal(cand2.address);
-    //     });
+        // Since `sender` is a reference, this
+        // modifies `voters[msg.sender].voted`
+        sender.voted = true;
+        sender.delegate = to;
+        Voter storage delegate_ = voters[to];
+        if (delegate_.voted) {
+            // If the delegate already voted,
+            // directly add to the number of votes
+            proposals[delegate_.vote].voteCount += sender.weight;
+        } else {
+            // If the delegate did not vote yet,
+            // add to her weight.
+            delegate_.weight += sender.weight;
+        }
+    }
 
-    //     it("Draw scenario", async function () {
-    //         await BallotVoting.connect(voter1).vote(cand1.address);
-    //         await BallotVoting.connect(voter2).vote(cand2.address);
-    //         await BallotVoting.conclude();
+    /// Give your vote (including votes delegated to you)
+    /// to proposal `proposals[proposal].name`.
+    function vote(uint256 proposal) public {
+        Voter storage sender = voters[msg.sender];
+        require(sender.weight != 0, "Has no right to vote");
+        require(!sender.voted, "Already voted.");
+        sender.voted = true;
+        sender.vote = proposal;
 
-    //         expect(await BallotVoting.winner()).to.equal("0x0000000000000000000000000000000000000000");
-    //     });
-    // });
-});
+        // If `proposal` is out of the range of the array,
+        // this will throw automatically and revert all
+        // changes.
+        proposals[proposal].voteCount += sender.weight;
+    }
+
+    /// @dev Computes the winning proposal taking all
+    /// previous votes into account.
+    function winningProposal() public view returns (uint256 winningProposal_) {
+        uint256 winningVoteCount = 0;
+        for (uint256 p = 0; p < proposals.length; p++) {
+            if (proposals[p].voteCount > winningVoteCount) {
+                winningVoteCount = proposals[p].voteCount;
+                winningProposal_ = p;
+            }
+        }
+    }
+
+    function getAllProposals() external view returns (Proposal[] memory) {
+        Proposal[] memory items = new Proposal[](proposals.length);
+        for (uint256 i = 0; i < proposals.length; i++) {
+            items[i] = proposals[i];
+        }
+        return items;
+    }
+
+    // Calls winningProposal() function to get the index
+    // of the winner contained in the proposals array and then
+    // returns the name of the winner
+    function winnerName() public view returns (bytes32 winnerName_) {
+        winnerName_ = proposals[winningProposal()].name;
+    }
+}
