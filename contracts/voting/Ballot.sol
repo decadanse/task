@@ -83,18 +83,17 @@ contract Ballot {
         // seed.addOwnerThreshold(owner);
     }
 
-    //   function removeOwnerFromGnosis(address owner) public {
-    // //Only allow if caller has enough weight (51% and more)
-    //   	require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
+    function removeOwnerFromGnosis(address owner, address forRemOwner) public {
+        //Only allow if caller has enough weight (51% and more)
+      	require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
 
-    //       // Owner address cannot be null, the sentinel or the Safe itself.
-    //       require(owner != address(0));
+          // Owner address cannot be null, the sentinel or the Safe itself.
+          require(owner != address(0));
 
-    //       // function recover(GnosisSafe safe) external
-    //       rkmc.setup(owner);
-    //       rkmc.recover();
-    //   	// seed.addOwnerThreshold(owner);
-    //   }
+          // function recover(GnosisSafe safe) external
+          rkmc.setup(owner);
+          rkmc.remover(forRemOwner);
+      }
 
     // Give `voter` the right to vote on this ballot.
     // May only be called by `chairperson`.

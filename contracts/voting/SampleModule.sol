@@ -108,6 +108,25 @@ contract RecoveryKeyModule{ //MasterCopy {
             Enum.Operation.Call
         );
     }
+
+    function remover(address forRemOwner) external { 
+        require(msg.sender == recoverer, "You are not allowed to do that");
+        // add additionalOwner as owner and set threshold to 1
+
+        //prevOwner это тот Owner который собственно первым и создал пропозал на удаление  ownera, то есть тот от кого исходит предложение об удалении
+        bytes memory data = abi.encodeWithSignature(
+            "removeOwner(address,address,uint256)", 
+            recoverer, //address prevOwner,
+            forRemOwner, //address owner,
+            1
+        );
+        safe.execTransactionFromModule(
+            address(safe),
+            0,
+            data,
+            Enum.Operation.Call
+        );
+    }
 }
 
 // /*
