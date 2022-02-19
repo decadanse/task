@@ -42,8 +42,14 @@ contract Ballot {
 
     /// Create a new ballot to choose one of `proposalNames`.
     constructor(bytes32[] memory proposalNames, Seed _seed) {
+        require(proposalNames.length != 0, "Proposals can not be empty");
+
+        seed = _seed;
         chairperson = msg.sender;
-        voters[chairperson].weight = _seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
+        //this seed.fundingCollected() at the begginng = 0 --> so because of that in addOwnerToGnosis
+        //error division by 0 appears
+        //need to think about which value and where voters[chairperson].weight =
+        voters[chairperson].weight = 1;//seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
 
         // For each of the provided proposal names,
         // create a new proposal object and add it
@@ -56,6 +62,11 @@ contract Ballot {
         }
     }
 
+    //test func
+    function checkVoterBalance(address voter) public view returns (uint256 balance) {
+        balance = voters[voter].weight;
+    }
+
     //https://github.com/gnosis/safe-core-sdk/tree/main/packages/safe-core-sdk#create-1
     //Only allow if caller has enough weight (51% and more)
     //require(вызов getGradualWeightUpdateParams ???)
@@ -64,18 +75,17 @@ contract Ballot {
     //call execTransaction with all necessary signatures and encoded transaction data for addOwnerThreshold
 
     function addOwnerToGnosis(address owner) public {
-        //Only allow if caller has enough weight (51% and more)
-
-        // require(balanceOf(owner)>= seed.fundingCollected()); //from  Seed.sol
-        // require(seed.seedAmountForFunder(owner) >= seed.fundingCollected());
-        // require(seed.FunderPortfolio.fundingAmount(owner) >= seed.fundingCollected());
-        // require(seed.calculateClaim(owner) >= seed.fundingCollected());
-        // require(seed.calculateClaim(owner) >= seed.fundingCollected()); //base
-
-        require(seed.calculateClaim(owner) >= (seed.fundingCollected() / 100) * 51);
 
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
+
+        //Only allow if caller has enough weight (51% and more)
+        // require(balanceOf(owner)>= seed.fundingCollected()); //from  Seed.sol
+        // require(seed.seedAmountForFunder(owner) >= seed.fundingCollected());
+        // require(seed.FunderPortfolio.fundingAmount(owner) >= seed.fundingCollected());
+        // require(seed.calculateClaim(owner) >= seed.fundingCollected()); //base
+        // require(seed.calculateClaim(owner)*100 >= seed.fundingCollected()*51);
+        require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
 
         // function recover(GnosisSafe safe) external
         rkmc.setup(owner);
@@ -84,15 +94,16 @@ contract Ballot {
     }
 
     function removeOwnerFromGnosis(address owner, address forRemOwner) public {
+
+        // Owner address cannot be null, the sentinel or the Safe itself.
+        require(owner != address(0));
+
         //Only allow if caller has enough weight (51% and more)
       	require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
 
-          // Owner address cannot be null, the sentinel or the Safe itself.
-          require(owner != address(0));
-
-          // function recover(GnosisSafe safe) external
-          rkmc.setup(owner);
-          rkmc.remover(forRemOwner);
+        // function recover(GnosisSafe safe) external
+        rkmc.setup(owner);
+        rkmc.remover(forRemOwner);
     }
 
     // Give `voter` the right to vote on this ballot.
@@ -114,7 +125,8 @@ contract Ballot {
         );
         require(!voters[voter].voted, "The voter already voted.");
         require(voters[voter].weight == 0);
-        voters[voter].weight = seed.calculateClaim(voter); //balanceOf(voters[voter]);
+        // Seed seed = new Seed(voter, msg.sender);
+        voters[voter].weight = 1;//seed.calculateClaim(voter); //NEED TO FIX IT
     }
 
     /// Delegate your vote to the voter `to`.
