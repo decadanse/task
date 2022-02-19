@@ -1,6 +1,8 @@
 const { expect } = require("chai")
 const { ethers } = require("hardhat")
 // const { api } = require("./utils/gnosis.js");
+const { parseUnits } = ethers.utils;
+
 const { lbp } = require("./deploy-lbp.js");
 const { seed } = require("./deploy-seed.js");
 const { constants } = require("@openzeppelin/test-helpers");
@@ -32,6 +34,14 @@ const deploy = async () => {
   // // BallotVoting  = await Voting.deploy(proposalNames, setup.Signer_Factory.address); //error here in Ballot.sol
   // BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); //error here in Ballot.sol
 
+  // setup.ballot = await init.getContractInstance(
+  //   "Ballot",
+  //   setup.roles.prime
+  // );  
+  // BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); //FINE //NO MORE error here in Ballot.sol
+
+
+
   await setup.seedFactory
     .connect(setup.roles.prime)
     .setMasterCopy(setup.seed.address);
@@ -50,14 +60,45 @@ const deploy = async () => {
 
 describe("Contract: Voting", async () => {
   let setup;
+
+//from deploy-lbp.js
+  let tokenAddresses,
+    admin,
+    owner,
+    sortedTokens,
+    projectAdmin,
+    primeBeneficiary;
+
+  const startTime = Math.floor(Date.now() / 1000) + 1;
+  const endTime = startTime + 100000;
+
+  const NAME = "SEED-MKR POOL";
+  const SYMBOL = "SEED-MKR";
+
+  const START_WEIGHTS = [0.7e18, 0.3e18].map((weight) => weight.toString());
+  const END_WEIGHTS = [0.3e18, 0.7e18].map((weight) => weight.toString());
+  const ADMIN_BALANCE = [32.667e18, 30000e6].map((balance) =>
+    balance.toString()
+  );
+
+  const AMOUNTS = [16.667e18, 15000e6].map((amount) => amount.toString());
+  const SWAP_FEE_PERCENTAGE = (0.5e16).toString(); // 0.5%
+  const FEE_FIVE = parseUnits("5", 17);
+  const fees = [SWAP_FEE_PERCENTAGE, FEE_FIVE];
+  const zero = 0;
+  const magicValue = `0x20c13b0b`;
+  const signaturePosition = 196;
+  const METADATA = "0x";
+//from deploy-lbp.js
+
   let nonce = 0;
   let Signer_Factory;
   let Voting;
 
-    const proposalNames = [ethers.utils.formatBytes32String("Proposal_1"),
-                            ethers.utils.formatBytes32String("Proposal_2"),
-                            ethers.utils.formatBytes32String("Proposal_3")];
-    const zeroProposalNames = [];//ethers.utils.formatBytes32String("")];
+  const proposalNames = [ethers.utils.formatBytes32String("Proposal_1"),
+                          ethers.utils.formatBytes32String("Proposal_2"),
+                          ethers.utils.formatBytes32String("Proposal_3")];
+  const zeroProposalNames = [];//ethers.utils.formatBytes32String("")];
 
 
   before("!! setup", async () => {
@@ -66,15 +107,14 @@ describe("Contract: Voting", async () => {
       "Signer",
       setup.roles.root
     );
+
+
     Voting = await ethers.getContractFactory(
       "Ballot",
       setup.roles.root
     )
-
     // Voting = await ethers.getContractFactory("Ballot");
     BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); //FINE //NO MORE error here in Ballot.sol
-
-    // await BallotVoting.connect(setup.roles.prime).setMasterCopy(setup.seed.address);
 
     // //linking the contract ABI
     // Voting = await ethers.getContractFactory("Ballot");
@@ -82,7 +122,7 @@ describe("Contract: Voting", async () => {
 
   });
 
-    describe("Adding Candidates", function () { //errors
+    describe(">> basic voting check", function () { //errors
         it("Checking root balance after deploy", async function () {
             expect(await BallotVoting.checkVoterBalance(setup.roles.root.address)).to.equal(1);
         });
@@ -94,13 +134,13 @@ describe("Contract: Voting", async () => {
 
   context(">> deploy voting contract", async () => {
     context("invalid constructor parameters", async () => {
-      // it("reverts when voting propasals is empty", async () => {
-      //   await expect(
-      //     BallotVoting.delegate()
-      //   ).to.revertedWith(
-      //     "BallotVoting:  cannot be empty"
-      //   );
-      // });
+      it("reverts when voting propasals is empty", async () => {
+        await expect(
+          Voting.deploy(zeroProposalNames, setup.seed.address)
+        ).to.revertedWith(
+          'Proposals can not be empty'
+        );
+      });
       it("Has no right to vote", async () => {
         await expect(
             //The signature is .connect(signer), not .connect(address). 
@@ -114,7 +154,7 @@ describe("Contract: Voting", async () => {
         // BallotVoting.delegate(setup.roles.buyer1.address);
         // BallotVoting.connect(setup.roles.root).giveRightToVote(setup.roles.buyer1.address);
         await expect(  
-        BallotVoting.connect(setup.roles.buyer2).giveRightToVote(setup.roles.buyer1.address) 
+          BallotVoting.connect(setup.roles.buyer2).giveRightToVote(setup.roles.buyer1.address) 
         ).to.revertedWith(
           'Only chairperson can give right to vote.'
         );         
@@ -124,7 +164,7 @@ describe("Contract: Voting", async () => {
         BallotVoting.connect(setup.roles.root).giveRightToVote(setup.roles.buyer2.address);        
         BallotVoting.connect(setup.roles.buyer2).vote(1);
         await expect(            
-            BallotVoting.connect(setup.roles.buyer2).delegate(setup.roles.buyer3.address)
+          BallotVoting.connect(setup.roles.buyer2).delegate(setup.roles.buyer3.address)
         ).to.revertedWith(
           'You already voted.'
         );         
@@ -132,7 +172,7 @@ describe("Contract: Voting", async () => {
 
       it("addOwnerToGnosis" , async () => {
         // BallotVoting.delegate(setup.roles.buyer1.address);
-        
+
         //добавить buy tokens --> balance woll NOT be 0
         BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address);        
       });
