@@ -122,7 +122,7 @@ describe("Contract: Voting", async () => {
 
       it("removeOwnerFromGnosis" , async () => {
         // BallotVoting.delegate(setup.roles.buyer1.address);
-        BallotVoting.removeOwnerFromGnosis(setup.roles.root, setup.roles.buyer1.address);        
+        BallotVoting.removeOwnerFromGnosis(setup.roles.root.address, setup.roles.buyer1.address);        
       });
       // it("reverts when seed factory address is zero", async () => {
       //   await expect(
