@@ -82,7 +82,7 @@ describe("Contract: Voting", async () => {
 
   });
 
-    describe("Adding Candidates", function () {
+    describe("Adding Candidates", function () { //errors
         it("Checking root balance after deploy", async function () {
             expect(await BallotVoting.checkVoterBalance(setup.roles.root.address)).to.equal(1);
         });
@@ -110,13 +110,30 @@ describe("Contract: Voting", async () => {
         );         
       }); 
 
-      it("giveRightToVote" , async () => {
+      it("Has no right to giveRightToVote" , async () => {
         // BallotVoting.delegate(setup.roles.buyer1.address);
-        BallotVoting.giveRightToVote(setup.roles.buyer2.address);        
+        // BallotVoting.connect(setup.roles.root).giveRightToVote(setup.roles.buyer1.address);
+        await expect(  
+        BallotVoting.connect(setup.roles.buyer2).giveRightToVote(setup.roles.buyer1.address) 
+        ).to.revertedWith(
+          'Only chairperson can give right to vote.'
+        );         
       });
+
+      it("Delegating", async () => {
+        BallotVoting.connect(setup.roles.root).giveRightToVote(setup.roles.buyer2.address);        
+        BallotVoting.connect(setup.roles.buyer2).vote(1);
+        await expect(            
+            BallotVoting.connect(setup.roles.buyer2).delegate(setup.roles.buyer3.address)
+        ).to.revertedWith(
+          'You already voted.'
+        );         
+      }); 
 
       it("addOwnerToGnosis" , async () => {
         // BallotVoting.delegate(setup.roles.buyer1.address);
+        
+        //добавить buy tokens --> balance woll NOT be 0
         BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address);        
       });
 
