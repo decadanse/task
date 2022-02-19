@@ -82,7 +82,7 @@ describe("Contract: Voting", async () => {
 
   });
 
-    describe("Adding Candidates", function () { //errors
+    describe("Adding Candidates", function () {
         it("Checking root balance after deploy", async function () {
             expect(await BallotVoting.checkVoterBalance(setup.roles.root.address)).to.equal(1);
         });
