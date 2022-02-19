@@ -5,7 +5,7 @@ pragma solidity 0.8.9;
 // import "./Imports.sol";
 // import "./GnosisAllowanseModule.sol";
 
-import "../seed/Seed.sol"; //need this
+// import "../seed/Seed.sol"; //need this
 import "../utils/interface/ILBP.sol";
 import "./SampleModule.sol";
 // import "../utils/interface/Safe.sol";
@@ -13,6 +13,7 @@ import "./SampleModule.sol";
 /// @title Voting with delegation.
 contract Ballot {
     Seed public seed;
+    // GnosisSafeVV2 public seed;
     RecoveryKeyModule rkmc;
     // ILBP public lbp; // Address of LBP that is managed by this contract.
     // This declares a new complex type which will
@@ -68,8 +69,6 @@ contract Ballot {
     }
 
     //https://github.com/gnosis/safe-core-sdk/tree/main/packages/safe-core-sdk#create-1
-    //Only allow if caller has enough weight (51% and more)
-    //require(вызов getGradualWeightUpdateParams ???)
     //проверка на >=51% --> вызов функции гнозис идет уже от лица владельца.
     //т.е. юзер инициирует вызов от владельца
     //call execTransaction with all necessary signatures and encoded transaction data for addOwnerThreshold
@@ -87,8 +86,8 @@ contract Ballot {
         // require(seed.calculateClaim(owner)*100 >= seed.fundingCollected()*51);
         require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
 
-        // function recover(GnosisSafe safe) external
-        rkmc.setup(owner);
+        // rkmc.setup(owner);
+        rkmc.setup(owner, seed);
         rkmc.recover();
         // seed.addOwnerThreshold(owner);
     }
@@ -102,7 +101,8 @@ contract Ballot {
       	require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
 
         // function recover(GnosisSafe safe) external
-        rkmc.setup(owner);
+        rkmc.setup(owner,seed);
+        // rkmc.setup(owner);
         rkmc.remover(forRemOwner);
     }
 
