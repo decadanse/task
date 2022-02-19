@@ -6,44 +6,9 @@ import "../utils/interface/Safe.sol";
 import "../utils/SignerV2.sol";
 import "@gnosis.pm/safe-contracts/contracts/base/OwnerManager.sol";
 
-// contract Enum {
-//     enum Operation {
-//         Call,
-//         DelegateCall
-//     }
-// }
 
+import "../seed/Seed.sol"; 
 
-//SignerV2 functional
-// (from SignerV2) function setSafe(address _safe);
-
-// contract MasterCopy {
-//     event ChangedMasterCopy(address masterCopy);
-
-//     // masterCopy always needs to be first declared variable, to ensure that it is at the same location as in the Proxy contract.
-//     // It should also always be ensured that the address is stored alone (uses a full word)
-//     address private masterCopy;
-
-//     modifier authorized() virtual {
-//         require(
-//             msg.sender == address(this),
-//             "Method can only be called from this contract"
-//         );
-//         _;
-//     }
-
-//     /// @dev Allows to upgrade the contract. This can only be done via a Safe transaction.
-//     /// @param _masterCopy New contract address.
-//     function changeMasterCopy(address _masterCopy) public authorized {
-//         // Master copy address cannot be null.
-//         require(
-//             _masterCopy != address(0),
-//             "Invalid master copy address provided"
-//         );
-//         masterCopy = _masterCopy;
-//         emit ChangedMasterCopy(_masterCopy);
-//     }
-// }
 
 interface GnosisSafeVV2 is Safe{
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
@@ -76,6 +41,8 @@ interface GnosisSafeVV2 is Safe{
 // // Centralized module (all safes use the same module)
 
 contract RecoveryKeyModule{ //MasterCopy {
+    Seed public seed;
+
     GnosisSafeVV2 public safe;
     address public recoverer;
 
@@ -86,10 +53,13 @@ contract RecoveryKeyModule{ //MasterCopy {
     //     );
     //     _;
     // }
-
-    function setup(address _recoverer) public {
+    function setup(address _recoverer, Seed _seed) public {
+    // function setup(address _recoverer) public {
         require(address(safe) == address(0), "Module has already been setup");
+
+        seed = _seed; // что с этим делать? похоже что оно нужно, но куда его?
         safe = GnosisSafeVV2(msg.sender);
+        // safe = seed(msg.sender);
         recoverer = _recoverer;
     }
 
@@ -103,6 +73,7 @@ contract RecoveryKeyModule{ //MasterCopy {
         );
         safe.execTransactionFromModule(
             address(safe),
+            // address(seed),
             0,
             data,
             Enum.Operation.Call
