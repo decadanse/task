@@ -74,12 +74,24 @@ describe("Contract: Voting", async () => {
     // Voting = await ethers.getContractFactory("Ballot");
     BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); //FINE //NO MORE error here in Ballot.sol
 
+    // await BallotVoting.connect(setup.roles.prime).setMasterCopy(setup.seed.address);
 
     // //linking the contract ABI
     // Voting = await ethers.getContractFactory("Ballot");
     // BallotVoting  = await Voting.deploy(proposalNames, setup.signer.address); //error here in Ballot.sol
 
   });
+
+    describe("Adding Candidates", function () { //errors
+        it("Checking root balance after deploy", async function () {
+            expect(await BallotVoting.checkVoterBalance(setup.roles.root.address)).to.equal(1);
+        });
+
+        it("Attempting to add an existing candidate", async function () {
+            await expect(BallotVoting.delegate(setup.roles.root.address)).to.be.revertedWith("Self-delegation is disallowed.");
+        });
+    });
+
   context(">> deploy voting contract", async () => {
     context("invalid constructor parameters", async () => {
       // it("reverts when voting propasals is empty", async () => {
@@ -89,9 +101,10 @@ describe("Contract: Voting", async () => {
       //     "BallotVoting:  cannot be empty"
       //   );
       // });
-      it("Has no right to vote" , async () => {
+      it("Has no right to vote", async () => {
         await expect(
-            BallotVoting.vote(1)
+            //The signature is .connect(signer), not .connect(address). 
+            BallotVoting.connect(setup.roles.buyer2).vote(1)
         ).to.revertedWith(
           'Has no right to vote'
         );         
@@ -120,6 +133,7 @@ describe("Contract: Voting", async () => {
       //   );
       // });
     });
+
 
     // context(">> add Owner To Gnosis", async () => {
     //   it("deploys voter contract", async () => {
