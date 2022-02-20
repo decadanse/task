@@ -10,6 +10,8 @@ import "../utils/interface/ILBP.sol";
 import "./SampleModule.sol";
 // import "../utils/interface/Safe.sol";
 
+import "hardhat/console.sol";
+
 /// @title Voting with delegation.
 contract Ballot {
     Seed public seed;
@@ -73,10 +75,11 @@ contract Ballot {
     //т.е. юзер инициирует вызов от владельца
     //call execTransaction with all necessary signatures and encoded transaction data for addOwnerThreshold
 
-    function addOwnerToGnosis(address owner) public {
-
+    function addOwnerToGnosis(address owner, Seed _seed) public {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
+
+        seed = _seed;
 
         //Only allow if caller has enough weight (51% and more)
         // require(balanceOf(owner)>= seed.fundingCollected()); //from  Seed.sol
@@ -84,8 +87,13 @@ contract Ballot {
         // require(seed.FunderPortfolio.fundingAmount(owner) >= seed.fundingCollected());
         // require(seed.calculateClaim(owner) >= seed.fundingCollected()); //base
         // require(seed.calculateClaim(owner)*100 >= seed.fundingCollected()*51);
-        require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
 
+        // console.log("owner is %s", owner);
+        
+        // console.log("seed.calculateClaim(owner) is %s", seed.calculateClaim(owner));
+        // console.log("seed.seed.fundingCollected() is %s", seed.fundingCollected());
+
+        require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51); //without it works fine so not problem
         // rkmc.setup(owner);
         rkmc.setup(owner, seed);
         rkmc.recover();
@@ -93,14 +101,12 @@ contract Ballot {
     }
 
     function removeOwnerFromGnosis(address owner, address forRemOwner) public {
-
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
 
         //Only allow if caller has enough weight (51% and more)
-      	require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
-
-        // function recover(GnosisSafe safe) external
+        // require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
+        // console.log();
         rkmc.setup(owner,seed);
         // rkmc.setup(owner);
         rkmc.remover(forRemOwner);

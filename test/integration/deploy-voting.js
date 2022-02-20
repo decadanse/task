@@ -1,12 +1,19 @@
 const { expect } = require("chai")
 const { ethers } = require("hardhat")
 // const { api } = require("./utils/gnosis.js");
-const { parseUnits } = ethers.utils;
+// const { parseUnits } = ethers.utils;
 
-const { lbp } = require("./deploy-lbp.js");
-const { seed } = require("./deploy-seed.js");
+// const { lbp } = require("./deploy-lbp.js");
+// const { seed } = require("./deploy-seed.js");
 const { constants } = require("@openzeppelin/test-helpers");
 const init = require("../test-init.js");
+
+const { time, expectRevert, BN } = require("@openzeppelin/test-helpers");
+const {
+  utils: { parseEther, parseUnits },
+  BigNumber,
+} = ethers;
+
 
 const deploy = async () => {
   const setup = await init.initialize(await ethers.getSigners());
@@ -15,36 +22,20 @@ const deploy = async () => {
     "GnosisSafe",
     setup.roles.prime
   );
-
   setup.proxySafe = await init.getGnosisProxyInstance(setup);
 
-  setup.seedFactory = await init.getContractInstance(
-    "SeedFactory",
-    setup.roles.prime
-  );
 
   setup.seed = await init.getContractInstance("Seed", setup.roles.prime);
+  setup.token = await init.gettokenInstances(setup);
 
 
-  // // setup.ballot = await init.getContractInstance("Ballot", setup.roles.prime, [], setup.seed); //error
-  //   const proposalNames = [ethers.utils.formatBytes32String("Proposal_1"),
-  //                           ethers.utils.formatBytes32String("Proposal_2"),
-  //                           ethers.utils.formatBytes32String("Proposal_3")];
-  // Voting = await ethers.getContractFactory("Ballot");
-  // // BallotVoting  = await Voting.deploy(proposalNames, setup.Signer_Factory.address); //error here in Ballot.sol
-  // BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); //error here in Ballot.sol
-
-  // setup.ballot = await init.getContractInstance(
-  //   "Ballot",
+  // setup.seedFactory = await init.getContractInstance(
+  //   "SeedFactory",
   //   setup.roles.prime
-  // );  
-  // BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); //FINE //NO MORE error here in Ballot.sol
-
-
-
-  await setup.seedFactory
-    .connect(setup.roles.prime)
-    .setMasterCopy(setup.seed.address);
+  // );
+  // await setup.seedFactory
+  //   .connect(setup.roles.prime)
+  //   .setMasterCopy(setup.seed.address);
 
   setup.data = {};
 
@@ -55,42 +46,14 @@ const deploy = async () => {
 // Вероятно проблема в том что в реальности seed не задеплоен
 // Я бы советовал попробовать задеплоить его локально, и уже потом ранить 
 // тесты с этим локально задеплоеным сидом(Через Factory, все как обычно)
+const getDecimals = async (token) => await token.decimals();
 
+const getTokenAmount = (tokenDecimal) => (amount) =>
+  parseUnits(amount, tokenDecimal.toString());
 
 
 describe("Contract: Voting", async () => {
   let setup;
-
-//from deploy-lbp.js
-  let tokenAddresses,
-    admin,
-    owner,
-    sortedTokens,
-    projectAdmin,
-    primeBeneficiary;
-
-  const startTime = Math.floor(Date.now() / 1000) + 1;
-  const endTime = startTime + 100000;
-
-  const NAME = "SEED-MKR POOL";
-  const SYMBOL = "SEED-MKR";
-
-  const START_WEIGHTS = [0.7e18, 0.3e18].map((weight) => weight.toString());
-  const END_WEIGHTS = [0.3e18, 0.7e18].map((weight) => weight.toString());
-  const ADMIN_BALANCE = [32.667e18, 30000e6].map((balance) =>
-    balance.toString()
-  );
-
-  const AMOUNTS = [16.667e18, 15000e6].map((amount) => amount.toString());
-  const SWAP_FEE_PERCENTAGE = (0.5e16).toString(); // 0.5%
-  const FEE_FIVE = parseUnits("5", 17);
-  const fees = [SWAP_FEE_PERCENTAGE, FEE_FIVE];
-  const zero = 0;
-  const magicValue = `0x20c13b0b`;
-  const signaturePosition = 196;
-  const METADATA = "0x";
-//from deploy-lbp.js
-
   let nonce = 0;
   let Signer_Factory;
   let Voting;
@@ -101,6 +64,61 @@ describe("Contract: Voting", async () => {
   const zeroProposalNames = [];//ethers.utils.formatBytes32String("")];
 
 
+  ///
+// let setup;
+  let root;
+  let admin;
+  let buyer1;
+  let buyer2;
+  let buyer3;
+  let buyer4;
+  let seedToken;
+  let seedTokenDecimal;
+  let getSeedAmounts;
+  let fundingToken;
+  let fundingTokenDecimal;
+  let getFundingAmounts;
+  let softCap;
+  let hardCap;
+  let price;
+  let buyAmount;
+  let smallBuyAmount;
+  let buySeedAmount;
+  let buySeedFee;
+  let startTime;
+  let endTime;
+  let vestingDuration;
+  let vestingCliff;
+  let permissionedSeed;
+  let fee;
+  let seed;
+  let metadata;
+  let seedForDistribution;
+  let seedForFee;
+  let requiredSeedAmount;
+  let claimAmount;
+  let feeAmount;
+  let totalClaimedByBuyer1;
+  let seedAmount;
+  let feeAmountOnClaim;
+
+  // constants
+  const zero = 0;
+  const one = 1;
+  const hundred = 100;
+  const tenETH = parseEther("10").toString();
+  const hundredTwoETH = parseEther("102").toString();
+  const twoHundredFourETH = parseEther("204").toString();
+  const hundredBn = new BN(100);
+  const twoBN = new BN(2);
+  const PRECISION = ethers.constants.WeiPerEther;
+  const ninetyTwoDaysInSeconds = time.duration.days(92);
+  const eightyNineDaysInSeconds = time.duration.days(89);
+  const tenDaysInSeconds = time.duration.days(10);
+
+  ///
+
+
   before("!! setup", async () => {
     setup = await deploy();
     Signer_Factory = await ethers.getContractFactory(
@@ -109,26 +127,79 @@ describe("Contract: Voting", async () => {
     );
 
 
+//add Seed.initialize() !!!! //_price = 0 --> div by 0 error
+      const CustomDecimalERC20Mock = await ethers.getContractFactory(
+        "CustomDecimalERC20Mock",
+        setup.roles.root
+      );
+
+      // Tokens used
+      // fundingToken = setup.token.fundingToken;
+      fundingToken = await CustomDecimalERC20Mock.deploy("USDC", "USDC", 16);
+      fundingTokenDecimal = (await getDecimals(fundingToken)).toString();
+      getFundingAmounts = getTokenAmount(fundingTokenDecimal);
+
+      // seedToken = setup.token.seedToken;
+      seedToken = await CustomDecimalERC20Mock.deploy("Prime", "Prime", 12);
+      seedTokenDecimal = (await getDecimals(seedToken)).toString();
+      getSeedAmounts = getTokenAmount(seedTokenDecimal);
+
+      // // Roles
+      root = setup.roles.root;
+      beneficiary = setup.roles.beneficiary;
+      admin = setup.roles.prime;
+      buyer1 = setup.roles.buyer1;
+      buyer2 = setup.roles.buyer2;
+      buyer3 = setup.roles.buyer3;
+
+      // // Parameters to initialize seed contract
+      softCap = getFundingAmounts("10").toString();
+      hardCap = getFundingAmounts("102").toString();
+      price = parseUnits(
+        "0.01",
+        parseInt(fundingTokenDecimal) - parseInt(seedTokenDecimal) + 18
+      ).toString();
+      buyAmount = getFundingAmounts("51").toString();
+      smallBuyAmount = getFundingAmounts("9").toString();
+      buySeedAmount = getSeedAmounts("5100").toString();
+      startTime = await time.latest();
+      endTime = await startTime.add(await time.duration.days(7));
+      vestingDuration = time.duration.days(365); // 1 year
+      vestingCliff = time.duration.days(90); // 3 months
+      permissionedSeed = false;
+      fee = parseEther("0.02").toString(); // 2%
+      metadata = `0x`;
+
+      buySeedFee = new BN(buySeedAmount)
+        .mul(new BN(fee))
+        .div(new BN(PRECISION.toString()));
+      seedForDistribution = new BN(hardCap)
+        .mul(new BN(PRECISION.toString()))
+        .div(new BN(price));
+      seedForFee = seedForDistribution
+        .mul(new BN(fee))
+        .div(new BN(PRECISION.toString()));
+      requiredSeedAmount = seedForDistribution.add(seedForFee);
+
+//add Seed.initialize() 
+
+
     Voting = await ethers.getContractFactory(
       "Ballot",
-      setup.roles.root
+      admin   //setup.roles.prime//root
     )
     // Voting = await ethers.getContractFactory("Ballot");
-    BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); //FINE //NO MORE error here in Ballot.sol
-
-    // //linking the contract ABI
-    // Voting = await ethers.getContractFactory("Ballot");
-    // BallotVoting  = await Voting.deploy(proposalNames, setup.signer.address); //error here in Ballot.sol
+    BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); 
 
   });
 
     describe(">> basic voting check", function () { //errors
         it("Checking root balance after deploy", async function () {
-            expect(await BallotVoting.checkVoterBalance(setup.roles.root.address)).to.equal(1);
+            expect(await BallotVoting.checkVoterBalance(admin.address)).to.equal(1);
         });
 
         it("Attempting to add an existing candidate", async function () {
-            await expect(BallotVoting.delegate(setup.roles.root.address)).to.be.revertedWith("Self-delegation is disallowed.");
+            await expect(BallotVoting.delegate(admin.address)).to.be.revertedWith("Self-delegation is disallowed.");
         });
     });
 
@@ -144,7 +215,7 @@ describe("Contract: Voting", async () => {
       it("Has no right to vote", async () => {
         await expect(
             //The signature is .connect(signer), not .connect(address). 
-            BallotVoting.connect(setup.roles.buyer2).vote(1)
+            BallotVoting.connect(buyer2).vote(1)
         ).to.revertedWith(
           'Has no right to vote'
         );         
@@ -154,60 +225,88 @@ describe("Contract: Voting", async () => {
         // BallotVoting.delegate(setup.roles.buyer1.address);
         // BallotVoting.connect(setup.roles.root).giveRightToVote(setup.roles.buyer1.address);
         await expect(  
-          BallotVoting.connect(setup.roles.buyer2).giveRightToVote(setup.roles.buyer1.address) 
+          BallotVoting.connect(buyer2).giveRightToVote(buyer1.address) 
         ).to.revertedWith(
           'Only chairperson can give right to vote.'
         );         
       });
 
       it("Delegating", async () => {
-        BallotVoting.connect(setup.roles.root).giveRightToVote(setup.roles.buyer2.address);        
-        BallotVoting.connect(setup.roles.buyer2).vote(1);
+        BallotVoting.connect(admin).giveRightToVote(buyer2.address);        
+        BallotVoting.connect(buyer2).vote(1);
         await expect(            
-          BallotVoting.connect(setup.roles.buyer2).delegate(setup.roles.buyer3.address)
+          BallotVoting.connect(buyer2).delegate(buyer3.address)
         ).to.revertedWith(
           'You already voted.'
         );         
       }); 
 
-      it("addOwnerToGnosis" , async () => {
-        // BallotVoting.delegate(setup.roles.buyer1.address);
+      it("$ initializes seed", async () => {
+        // emulate creation & initialization via seedfactory & fund with seedTokens
+        await setup.seed.initialize(
+          beneficiary.address,
+          admin.address,
+          [seedToken.address, fundingToken.address],
+          [softCap, hardCap],
+          price,
+          startTime.toNumber(),
+          endTime.toNumber(),
+          vestingDuration.toNumber(),
+          vestingCliff.toNumber(),
+          permissionedSeed,
+          fee
+        );
 
-        //добавить buy tokens --> balance woll NOT be 0
-        BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address);        
+        //добавить buy tokens --> balance will NOT be 0
+        await fundingToken
+          .connect(root)
+          .transfer(buyer1.address, getFundingAmounts("102"));
+        await fundingToken
+          .connect(buyer1)
+          .approve(setup.seed.address, getFundingAmounts("102"));
+      });
+
+      it("$ setups gnosis safe", async () => {
+        await setup.proxySafe
+          .connect(admin)
+          .setup(
+            [admin.address],
+            1,
+            setup.proxySafe.address,
+            "0x",
+            constants.ZERO_ADDRESS,
+            constants.ZERO_ADDRESS,
+            0,
+            admin.address
+          );
+      });
+
+
+
+// // To deploy run following js (web3js 0.4.x):
+// let moduleSetupData = await recoveryModuleMasterCopy.contract.setup.getData()
+// let moduleCreationData = await proxyFactory.contract.createProxy.getData(recoveryModuleMasterCopy.address, moduleSetupData)
+// // see https://github.com/gnosis/safe-contracts/blob/development/test/utils/general.js#L9
+// let enableModuleParameterData = utils.createAndAddModulesData([moduleCreationData])
+// let enableModuleData = createAndAddModules.contract.createAndAddModules.getData(proxyFactory.address, enableModuleParameterData)
+// // generate sigs
+// let tx = await gnosisSafe.execTransaction(createAndAddModules.address, 0, enableModuleData, DelegateCall, 0, 0, 0, 0, 0, sigs)
+
+      it("addOwnerToGnosis" , async () => {
+
+      // Uncaught Error: Transaction reverted: function call to a non-contract account
+      // at Ballot.addOwnerToGnosis (contracts/voting/Ballot.sol:100)
+
+      //NEED INITIALIZE RecoveryKeyModule --> setup on Ballot.sol:100 just NOT INITED
+
+        BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address, setup.seed.address);        
       });
 
       it("removeOwnerFromGnosis" , async () => {
         // BallotVoting.delegate(setup.roles.buyer1.address);
-        BallotVoting.removeOwnerFromGnosis(setup.roles.root.address, setup.roles.buyer1.address);        
+        BallotVoting.removeOwnerFromGnosis(admin.address, buyer1.address);        
       });
-      // it("reverts when seed factory address is zero", async () => {
-      //   await expect(
-      //   // Signer_Factory.deploy(setup.proxySafe.address, constants.ZERO_ADDRESS)
-      //       Voting.deploy([], 0)
-      //   ).to.revertedWith(
-      //     "Signer: Safe and SeedFactory address cannot be zero"
-      //   );
-      // });
     });
-
-
-    // context(">> add Owner To Gnosis", async () => {
-    //   it("deploys voter contract", async () => {
-
-    //     // Voting.deploy(proposalNames, setup.seed.address); 
-    //     // BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address);
-
-    //     // setup.signer = await Signer_Factory.deploy(
-    //     //   setup.proxySafe.address,
-    //     //   setup.seedFactory.address
-    //     // );
-    //     // expect(await BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address));
-    //     // expect(
-    //     //   await setup.signer.connect(setup.roles.root).seedFactory()
-    //     // ).to.equal(setup.seedFactory.address);
-    //   });
-    // });
 
   });
 

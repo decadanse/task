@@ -9,8 +9,10 @@ import "@gnosis.pm/safe-contracts/contracts/base/OwnerManager.sol";
 
 import "../seed/Seed.sol"; 
 
+import "hardhat/console.sol";
 
-interface GnosisSafeVV2 is Safe{
+
+interface GnosisSafeVV2 {//is Safe {
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
     /// @param to Destination address of module transaction.
     /// @param value Ether value of module transaction.
@@ -40,7 +42,7 @@ interface GnosisSafeVV2 is Safe{
 // // Single Instance module (each safe has it's own module)
 // // Centralized module (all safes use the same module)
 
-contract RecoveryKeyModule{ //MasterCopy {
+contract RecoveryKeyModule {//is OwnerManager{ //MasterCopy {
     Seed public seed;
 
     GnosisSafeVV2 public safe;
@@ -58,7 +60,10 @@ contract RecoveryKeyModule{ //MasterCopy {
         require(address(safe) == address(0), "Module has already been setup");
 
         seed = _seed; // что с этим делать? похоже что оно нужно, но куда его?
-        safe = GnosisSafeVV2(msg.sender);
+
+        // safe = GnosisSafeVV2(msg.sender);
+        safe = GnosisSafeVV2(seed.admin.address);
+        console.log();
         // safe = seed(msg.sender);
         recoverer = _recoverer;
     }
@@ -82,6 +87,7 @@ contract RecoveryKeyModule{ //MasterCopy {
 
     function remover(address forRemOwner) external { 
         require(msg.sender == recoverer, "You are not allowed to do that");
+
         // add additionalOwner as owner and set threshold to 1
 
         //prevOwner это тот Owner который собственно первым и создал пропозал на удаление  ownera, то есть тот от кого исходит предложение об удалении
@@ -91,8 +97,10 @@ contract RecoveryKeyModule{ //MasterCopy {
             forRemOwner, //address owner,
             1
         );
+        // seed.execTransactionFromModule(
         safe.execTransactionFromModule(
             address(safe),
+            // address(seed),
             0,
             data,
             Enum.Operation.Call
