@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
+
+// import "../utils/interface/Safe.sol";
+import "../utils/SignerV2.sol";
+import "@gnosis.pm/safe-contracts/contracts/base/OwnerManager.sol";
+
+
+import "../seed/Seed.sol"; 
 // import balance pool; to get amount of stake with weight
 // import "../test/Imports.sol";
 // import "./GnosisAllowanseModule.sol";
 
 // import "../seed/Seed.sol"; //need this
 import "../utils/interface/ILBP.sol";
-import "./SampleModule.sol";
+// import "./SampleModule.sol";
 // import "../utils/interface/Safe.sol";
 
 import "hardhat/console.sol";
@@ -18,8 +25,9 @@ import "hardhat/console.sol";
 /// @title Voting with delegation.
 contract Ballot {
     Seed public seed;
+    address public gnosis;
     // GnosisSafeVV2 public seed;
-    RecoveryKeyModule rkmc;
+    // RecoveryKeyModule rkmc;
     // ILBP public lbp; // Address of LBP that is managed by this contract.
     // This declares a new complex type which will
     // be used for variables later.
@@ -47,10 +55,11 @@ contract Ballot {
     Proposal[] public proposals;
 
     /// Create a new ballot to choose one of `proposalNames`.
-    constructor(bytes32[] memory proposalNames, Seed _seed) {
+    constructor(bytes32[] memory proposalNames, Seed _seed, address _gnosis) {
         require(proposalNames.length != 0, "Proposals can not be empty");
 
         seed = _seed;
+        gnosis = _gnosis;
         chairperson = msg.sender;
         //this seed.fundingCollected() at the begginng = 0 --> so because of that in addOwnerToGnosis
         //error division by 0 appears
@@ -78,11 +87,11 @@ contract Ballot {
     //т.е. юзер инициирует вызов от владельца
     //call execTransaction with all necessary signatures and encoded transaction data for addOwnerThreshold
 
-    function addOwnerToGnosis(address owner, Seed _seed) public {
+    function addOwnerToGnosis(address owner) public {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
 
-        seed = _seed;
+        // seed = _seed;
 
         //Only allow if caller has enough weight (51% and more)
         // require(balanceOf(owner)>= seed.fundingCollected()); //from  Seed.sol
@@ -100,21 +109,25 @@ contract Ballot {
         // rkmc.setup(owner);
         console.log("addOwnerToGnosis owner is %s", owner);
         console.log("addOwnerToGnosis seed is %s", address(seed));
-        console.log("addOwnerToGnosis rkmc is %s", address(rkmc));
+        console.log("addOwnerToGnosis rkmc is %s", address(gnosis));
 
 
-        // let execTransaction = async function(safe, to, value, data, operation, message) {
-        //     let nonce = await safe.nonce()
-        //     let transactionHash = await safe.getTransactionHash(to, value, data, addOwnerWithThreshold, 0, 0, 0, ADDRESS_0, ADDRESS_0, nonce)
-        //     let sigs = utils.signTransaction(lw, [lw.accounts[0], lw.accounts[1]], transactionHash)
-        //     utils.logGasUsage(
-        //         'execTransaction ' + message,
-        //         await safe.execTransaction(to, value, data, operation, 0, 0, 0, ADDRESS_0, ADDRESS_0, sigs)
-        //     )
-        // }
+        bytes memory data = abi.encodeWithSignature(
+            "addOwnerWithThreshold(address,uint256)",
+            owner,
+            1
+        );
 
-        rkmc.setup(owner, seed);
-        rkmc.recover();
+        gnosis.execTransaction(
+            address(seed),
+            0,
+            data,
+            Enum.Operation.Call
+        );
+
+
+        // rkmc.setup(owner, seed);
+        // rkmc.recover();
         // seed.addOwnerThreshold(owner);
     }
 
@@ -125,9 +138,9 @@ contract Ballot {
         //Only allow if caller has enough weight (51% and more)
         // require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
         // console.log();
-        rkmc.setup(owner,seed);
+        // rkmc.setup(owner,seed);
         // rkmc.setup(owner);
-        rkmc.remover(forRemOwner);
+        // rkmc.remover(forRemOwner);
     }
 
     // Give `voter` the right to vote on this ballot.

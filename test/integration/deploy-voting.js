@@ -189,7 +189,7 @@ describe("Contract: Voting", async () => {
       admin   //setup.roles.prime//root
     );
     // Voting = await ethers.getContractFactory("Ballot");
-    BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); 
+    BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address, setup.proxySafe.address); 
 
     RecoveryKeyModule = await ethers.getContractFactory(
       "RecoveryKeyModule",
@@ -323,7 +323,7 @@ describe("Contract: Voting", async () => {
       // let tx = await gnosisSafe.execTransaction(createAndAddModules.address, 0, enableModuleData, DelegateCall, 0, 0, 0, 0, 0, sigs)
 
 
-        BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address, setup.seed.address);        
+        BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address);//, setup.seed.address);        
       });
 
       it("removeOwnerFromGnosis" , async () => {
