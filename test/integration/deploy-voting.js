@@ -187,9 +187,14 @@ describe("Contract: Voting", async () => {
     Voting = await ethers.getContractFactory(
       "Ballot",
       admin   //setup.roles.prime//root
-    )
+    );
     // Voting = await ethers.getContractFactory("Ballot");
     BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address); 
+
+    RecoveryKeyModule = await ethers.getContractFactory(
+      "RecoveryKeyModule",
+      admin   //setup.roles.prime//root
+    );
 
   });
 
@@ -282,15 +287,25 @@ describe("Contract: Voting", async () => {
       });
 
 
+    it('should DEPLOY RecoveryKeyModule', async () => {
+        // const setupData = await gnosisSafeMasterCopy.setup([lw.accounts[0], lw.accounts[1]], 2, ADDRESS_0, "0x", 0, 0, 0, 0)
+        // const CALL = 0
+
+        // Find event in tx and create contract instance
+        // const safe = utils.getParamFromTxEvent(
+        //     await proxyFactory.createProxy(gnosisSafeMasterCopy.address, setup.proxySafe),
+        //     'ProxyCreation', 'proxy', proxyFactory.address, GnosisSafe, 'create Gnosis Safe' 
+        // )
+        
+        // Setup module
+        const testModule = await RecoveryKeyModule.deploy() //HOW can I deploy RecoveryKeyModule?
+
+        
+        // const enableModuleData = await setup.proxySafe.enableModule(testModule.address).encodeABI()
+        // await execTransaction(setup.proxySafe.address, 0, enableModuleData, CALL, "enable module")
+    });
 
 // // To deploy run following js (web3js 0.4.x):
-// let moduleSetupData = await recoveryModuleMasterCopy.contract.setup.getData()
-// let moduleCreationData = await proxyFactory.contract.createProxy.getData(recoveryModuleMasterCopy.address, moduleSetupData)
-// // see https://github.com/gnosis/safe-contracts/blob/development/test/utils/general.js#L9
-// let enableModuleParameterData = utils.createAndAddModulesData([moduleCreationData])
-// let enableModuleData = createAndAddModules.contract.createAndAddModules.getData(proxyFactory.address, enableModuleParameterData)
-// // generate sigs
-// let tx = await gnosisSafe.execTransaction(createAndAddModules.address, 0, enableModuleData, DelegateCall, 0, 0, 0, 0, 0, sigs)
 
       it("addOwnerToGnosis" , async () => {
 
@@ -298,6 +313,15 @@ describe("Contract: Voting", async () => {
       // at Ballot.addOwnerToGnosis (contracts/voting/Ballot.sol:100)
 
       //NEED INITIALIZE RecoveryKeyModule --> setup on Ballot.sol:100 just NOT INITED
+
+      // let moduleSetupData = await setup.proxySafe.contract.setup.getData()
+      // let moduleCreationData = await setup.proxySafe.contract.createProxy.getData(recoveryModuleMasterCopy.address, moduleSetupData)
+      // // see https://github.com/gnosis/safe-contracts/blob/development/test/utils/general.js#L9
+      // let enableModuleParameterData = utils.createAndAddModulesData([moduleCreationData])
+      // let enableModuleData = createAndAddModules.contract.createAndAddModules.getData(setup.proxySafe.address, enableModuleParameterData)
+      // // generate sigs
+      // let tx = await gnosisSafe.execTransaction(createAndAddModules.address, 0, enableModuleData, DelegateCall, 0, 0, 0, 0, 0, sigs)
+
 
         BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address, setup.seed.address);        
       });

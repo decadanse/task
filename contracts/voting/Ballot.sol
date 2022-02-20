@@ -2,7 +2,7 @@
 pragma solidity 0.8.9;
 
 // import balance pool; to get amount of stake with weight
-// import "./Imports.sol";
+// import "../test/Imports.sol";
 // import "./GnosisAllowanseModule.sol";
 
 // import "../seed/Seed.sol"; //need this
@@ -11,6 +11,9 @@ import "./SampleModule.sol";
 // import "../utils/interface/Safe.sol";
 
 import "hardhat/console.sol";
+
+
+// const utils = require('@gnosis.pm/safe-contracts/test/utils/general');
 
 /// @title Voting with delegation.
 contract Ballot {
@@ -95,6 +98,21 @@ contract Ballot {
 
         require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51); //without it works fine so not problem
         // rkmc.setup(owner);
+        console.log("addOwnerToGnosis owner is %s", owner);
+        console.log("addOwnerToGnosis seed is %s", address(seed));
+        console.log("addOwnerToGnosis rkmc is %s", address(rkmc));
+
+
+        // let execTransaction = async function(safe, to, value, data, operation, message) {
+        //     let nonce = await safe.nonce()
+        //     let transactionHash = await safe.getTransactionHash(to, value, data, addOwnerWithThreshold, 0, 0, 0, ADDRESS_0, ADDRESS_0, nonce)
+        //     let sigs = utils.signTransaction(lw, [lw.accounts[0], lw.accounts[1]], transactionHash)
+        //     utils.logGasUsage(
+        //         'execTransaction ' + message,
+        //         await safe.execTransaction(to, value, data, operation, 0, 0, 0, ADDRESS_0, ADDRESS_0, sigs)
+        //     )
+        // }
+
         rkmc.setup(owner, seed);
         rkmc.recover();
         // seed.addOwnerThreshold(owner);
