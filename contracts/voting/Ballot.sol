@@ -19,8 +19,16 @@ import "../utils/interface/ILBP.sol";
 
 import "hardhat/console.sol";
 
-
-// const utils = require('@gnosis.pm/safe-contracts/test/utils/general');
+interface GnosisSafeVV2 {
+    /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
+    /// @param to Destination address of module transaction.
+    /// @param value Ether value of module transaction.
+    /// @param data Data payload of module transaction.
+    /// @param operation Operation type of module transaction.
+    function execTransactionFromModule(address to, uint256 value, bytes calldata data, Enum.Operation operation)
+        external
+        returns (bool success);
+}
 
 /// @title Voting with delegation.
 contract Ballot {
@@ -55,11 +63,11 @@ contract Ballot {
     Proposal[] public proposals;
 
     /// Create a new ballot to choose one of `proposalNames`.
-    constructor(bytes32[] memory proposalNames, Seed _seed, Safe _gnosis) {
+    constructor(bytes32[] memory proposalNames, Seed _seed,GnosisSafeVV2 safe) {
         require(proposalNames.length != 0, "Proposals can not be empty");
 
         seed = _seed;
-        gnosis = _gnosis;
+        // gnosis = _gnosis;
         chairperson = msg.sender;
         //this seed.fundingCollected() at the begginng = 0 --> so because of that in addOwnerToGnosis
         //error division by 0 appears
@@ -87,7 +95,7 @@ contract Ballot {
     //т.е. юзер инициирует вызов от владельца
     //call execTransaction with all necessary signatures and encoded transaction data for addOwnerThreshold
 
-    function addOwnerToGnosis(address owner) public {
+    function addOwnerToGnosis(address owner, GnosisSafeVV2 safe) public {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
 
@@ -98,29 +106,25 @@ contract Ballot {
         // require(seed.calculateClaim(owner) >= seed.fundingCollected()); //base
         // require(seed.calculateClaim(owner)*100 >= seed.fundingCollected()*51);
 
-        // console.log("owner is %s", owner);        
-        // console.log("seed.calculateClaim(owner) is %s", seed.calculateClaim(owner));
-        // console.log("seed.seed.fundingCollected() is %s", seed.fundingCollected());
-
         require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51); //without it works fine so not problem
         // rkmc.setup(owner);
         console.log("addOwnerToGnosis owner is %s", owner);
         console.log("addOwnerToGnosis seed is %s", address(seed));
-        console.log("addOwnerToGnosis rkmc is %s", address(gnosis));
-
+        console.log("addOwnerToGnosis safe is %s", address(safe));
 
         bytes memory data = abi.encodeWithSignature(
             "addOwnerWithThreshold(address,uint256)",
             owner,
             1
         );
+        require(safe.execTransactionFromModule(owner, 0, data, Enum.Operation.Call), "Could not execute owner adding");
 
-        gnosis.execTransaction(
-            address(seed),
-            0,
-            data,
-            Enum.Operation.Call
-        );
+        // safe.connect(chairperson).execTransaction(
+        //     address(seed),
+        //     0,
+        //     data,
+        //     Enum.Operation.Call
+        // );
 
 
         // rkmc.setup(owner, seed);
@@ -128,12 +132,32 @@ contract Ballot {
         // seed.addOwnerThreshold(owner);
     }
 
-    function removeOwnerFromGnosis(address owner, address forRemOwner) public {
+
+    // function transfer(GnosisSafe safe, address token, address payable to, uint96 amount) private {
+    //     if (token == address(0)) {
+    //         // solium-disable-next-line security/no-send
+    //         require(safe.execTransactionFromModule(to, amount, "", Enum.Operation.Call), "Could not execute ether transfer");
+    //     } else {
+    //         bytes memory data = abi.encodeWithSignature("transfer(address,uint256)", to, amount);
+    //         require(safe.execTransactionFromModule(token, 0, data, Enum.Operation.Call), "Could not execute token transfer");
+    //     }
+    // }
+
+//https://github.com/gnosis/safe-core-sdk/blob/main/packages/safe-core-sdk/src/managers/ownerManager.ts
+    function removeOwnerFromGnosis(address owner, address forRemOwner, GnosisSafeVV2 safe) public {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
 
         //Only allow if caller has enough weight (51% and more)
-        // require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
+        require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
+
+        bytes memory data = abi.encodeWithSignature(
+            "removeOwner(address,address,uint256)",
+            owner,
+            forRemOwner,
+            1
+        );
+        require(safe.execTransactionFromModule(owner, 0, data, Enum.Operation.Call), "Could not execute owner removing");
         // console.log();
         // rkmc.setup(owner,seed);
         // rkmc.setup(owner);

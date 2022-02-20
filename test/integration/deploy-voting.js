@@ -29,13 +29,13 @@ const deploy = async () => {
   setup.token = await init.gettokenInstances(setup);
 
 
-  // setup.seedFactory = await init.getContractInstance(
-  //   "SeedFactory",
-  //   setup.roles.prime
-  // );
-  // await setup.seedFactory
-  //   .connect(setup.roles.prime)
-  //   .setMasterCopy(setup.seed.address);
+  setup.seedFactory = await init.getContractInstance(
+    "SeedFactory",
+    setup.roles.prime
+  );
+  await setup.seedFactory
+    .connect(setup.roles.prime)
+    .setMasterCopy(setup.seed.address);
 
   setup.data = {};
 
@@ -212,7 +212,7 @@ describe("Contract: Voting", async () => {
     context("invalid constructor parameters", async () => {
       it("reverts when voting propasals is empty", async () => {
         await expect(
-          Voting.deploy(zeroProposalNames, setup.seed.address)
+          Voting.deploy(zeroProposalNames, setup.seed.address, setup.proxySafe.address)
         ).to.revertedWith(
           'Proposals can not be empty'
         );
@@ -287,27 +287,29 @@ describe("Contract: Voting", async () => {
       });
 
 
-    it('should DEPLOY RecoveryKeyModule', async () => {
-        // const setupData = await gnosisSafeMasterCopy.setup([lw.accounts[0], lw.accounts[1]], 2, ADDRESS_0, "0x", 0, 0, 0, 0)
-        // const CALL = 0
+    // it('should DEPLOY RecoveryKeyModule', async () => {
+    //     // const setupData = await gnosisSafeMasterCopy.setup([lw.accounts[0], lw.accounts[1]], 2, ADDRESS_0, "0x", 0, 0, 0, 0)
+    //     // const CALL = 0
 
-        // Find event in tx and create contract instance
-        // const safe = utils.getParamFromTxEvent(
-        //     await proxyFactory.createProxy(gnosisSafeMasterCopy.address, setup.proxySafe),
-        //     'ProxyCreation', 'proxy', proxyFactory.address, GnosisSafe, 'create Gnosis Safe' 
-        // )
+    //     // Find event in tx and create contract instance
+    //     // const safe = utils.getParamFromTxEvent(
+    //     //     await proxyFactory.createProxy(gnosisSafeMasterCopy.address, setup.proxySafe),
+    //     //     'ProxyCreation', 'proxy', proxyFactory.address, GnosisSafe, 'create Gnosis Safe' 
+    //     // )
         
-        // Setup module
-        const testModule = await RecoveryKeyModule.deploy() //HOW can I deploy RecoveryKeyModule?
+    //     // Setup module
+    //     // const testModule = await RecoveryKeyModule.deploy() //HOW can I deploy RecoveryKeyModule?
 
-        
-        // const enableModuleData = await setup.proxySafe.enableModule(testModule.address).encodeABI()
-        // await execTransaction(setup.proxySafe.address, 0, enableModuleData, CALL, "enable module")
-    });
+    //     let enableModuleData = setup.proxySafe.contract.methods.enableModule(accounts[0]).encodeABI();
+    //     await safeUtils.executeTransaction(setup.seed, setup.proxySafe, 'add owner', [setup.roles.buyer1.address]);
+    //     // const enableModuleData = await setup.proxySafe.enableModule(testModule.address).encodeABI()
+    //     // await execTransaction(setup.proxySafe.address, 0, enableModuleData, CALL, "enable module")
+    // });
 
 // // To deploy run following js (web3js 0.4.x):
 
       it("addOwnerToGnosis" , async () => {
+        //https://github.com/gnosis/safe-contracts/blob/9311dbc0c8a33cef98d02d3ff4d65515e1f9dd6a/test/gnosisSafeExecuteFromModule.js
 
       // Uncaught Error: Transaction reverted: function call to a non-contract account
       // at Ballot.addOwnerToGnosis (contracts/voting/Ballot.sol:100)
@@ -323,12 +325,12 @@ describe("Contract: Voting", async () => {
       // let tx = await gnosisSafe.execTransaction(createAndAddModules.address, 0, enableModuleData, DelegateCall, 0, 0, 0, 0, 0, sigs)
 
 
-        BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address);//, setup.seed.address);        
+        BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address, setup.proxySafe.address);//, setup.seed.address);        
       });
 
       it("removeOwnerFromGnosis" , async () => {
         // BallotVoting.delegate(setup.roles.buyer1.address);
-        BallotVoting.removeOwnerFromGnosis(admin.address, buyer1.address);        
+        BallotVoting.removeOwnerFromGnosis(admin.address, buyer1.address, setup.proxySafe.address);        
       });
     });
 
