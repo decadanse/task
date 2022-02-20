@@ -5,7 +5,7 @@ pragma solidity 0.8.9;
 // import "../utils/interface/Safe.sol";
 import "../utils/SignerV2.sol";
 import "@gnosis.pm/safe-contracts/contracts/base/OwnerManager.sol";
-
+// import "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
 
 import "../seed/Seed.sol"; 
 // import balance pool; to get amount of stake with weight
@@ -25,7 +25,7 @@ import "hardhat/console.sol";
 /// @title Voting with delegation.
 contract Ballot {
     Seed public seed;
-    address public gnosis;
+    Safe public gnosis;
     // GnosisSafeVV2 public seed;
     // RecoveryKeyModule rkmc;
     // ILBP public lbp; // Address of LBP that is managed by this contract.
@@ -55,7 +55,7 @@ contract Ballot {
     Proposal[] public proposals;
 
     /// Create a new ballot to choose one of `proposalNames`.
-    constructor(bytes32[] memory proposalNames, Seed _seed, address _gnosis) {
+    constructor(bytes32[] memory proposalNames, Seed _seed, Safe _gnosis) {
         require(proposalNames.length != 0, "Proposals can not be empty");
 
         seed = _seed;
@@ -91,8 +91,6 @@ contract Ballot {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
 
-        // seed = _seed;
-
         //Only allow if caller has enough weight (51% and more)
         // require(balanceOf(owner)>= seed.fundingCollected()); //from  Seed.sol
         // require(seed.seedAmountForFunder(owner) >= seed.fundingCollected());
@@ -100,8 +98,7 @@ contract Ballot {
         // require(seed.calculateClaim(owner) >= seed.fundingCollected()); //base
         // require(seed.calculateClaim(owner)*100 >= seed.fundingCollected()*51);
 
-        // console.log("owner is %s", owner);
-        
+        // console.log("owner is %s", owner);        
         // console.log("seed.calculateClaim(owner) is %s", seed.calculateClaim(owner));
         // console.log("seed.seed.fundingCollected() is %s", seed.fundingCollected());
 
