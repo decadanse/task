@@ -2,24 +2,27 @@
 pragma solidity 0.8.9;
 
 
-// import "../utils/interface/Safe.sol";
+import "../utils/interface/Safe.sol"; // import "../test/Imports.sol";
 import "../utils/SignerV2.sol";
-import "@gnosis.pm/safe-contracts/contracts/base/OwnerManager.sol";
+// import "@gnosis.pm/safe-contracts/contracts/base/OwnerManager.sol";
+// import "@gnosis.pm/safe-contracts/contracts/base/ModuleManager.sol";
+
 // import "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
 
 import "../seed/Seed.sol"; 
 // import balance pool; to get amount of stake with weight
-// import "../test/Imports.sol";
+
 // import "./GnosisAllowanseModule.sol";
 
 // import "../seed/Seed.sol"; //need this
-import "../utils/interface/ILBP.sol";
+// import "../utils/interface/ILBP.sol";
 // import "./SampleModule.sol";
 // import "../utils/interface/Safe.sol";
 
+
 import "hardhat/console.sol";
 
-interface GnosisSafeVV2 {
+interface GnosisSafeVV2 is Safe{
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
     /// @param to Destination address of module transaction.
     /// @param value Ether value of module transaction.
@@ -33,8 +36,9 @@ interface GnosisSafeVV2 {
 /// @title Voting with delegation.
 contract Ballot {
     Seed public seed;
-    Safe public gnosis;
-    // GnosisSafeVV2 public seed;
+    // Safe public gnosis;
+    Safe public safe;
+
     // RecoveryKeyModule rkmc;
     // ILBP public lbp; // Address of LBP that is managed by this contract.
     // This declares a new complex type which will
@@ -63,11 +67,15 @@ contract Ballot {
     Proposal[] public proposals;
 
     /// Create a new ballot to choose one of `proposalNames`.
-    constructor(bytes32[] memory proposalNames, Seed _seed,GnosisSafeVV2 safe) {
+    constructor(bytes32[] memory proposalNames, Seed _seed, Safe _safe) {
         require(proposalNames.length != 0, "Proposals can not be empty");
 
         seed = _seed;
-        // gnosis = _gnosis;
+        safe = _safe;
+        // console.log(" safe  is %s", address(safe));
+        // console.log(" seed  is %s", address(seed));
+        // console.log(" seed admin is %s", seed.admin.address);
+
         chairperson = msg.sender;
         //this seed.fundingCollected() at the begginng = 0 --> so because of that in addOwnerToGnosis
         //error division by 0 appears
@@ -95,7 +103,33 @@ contract Ballot {
     //т.е. юзер инициирует вызов от владельца
     //call execTransaction with all necessary signatures and encoded transaction data for addOwnerThreshold
 
-    function addOwnerToGnosis(address owner, GnosisSafeVV2 safe) public {
+    // const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+    // const safeContract = await ethers.getContractAt(GnosisSafeSol.abi, GnosisSafeSol.address);
+    // const safeAccounts = [pubKey1, pubKey2, pubKey3]; 
+    // const DEFAULT_FALLBACK_HANDLER_ADDRESS = "0x...";
+    // const params = [ 
+    //   safeAddresses, 
+    //   numConfirmations, 
+    //   ZERO_ADDRESS, 
+    //   "0x", 
+    //   DEFAULT_FALLBACK_HANDLER_ADDRESS, 
+    //   ZERO_ADDRESS, 
+    //   0, 
+    //   ZERO_ADDRESS 
+    // ];// proxy deployment
+    // const safeAbi = safeContract.interface.encodeFunctionData(
+    //   "setup", params
+    // );
+    // const ProxyFactoryContract = await ethers.getContractAt(ProxyFactorySol.abi, ProxyFactorySol.address);
+    // const signer = ProxyFactoryContract.connect(myWallet);
+    // const saltNonce = Date.now();
+    // const txResponse = await signer.createProxyWithNonce(
+    //   safeContract.address, safeAbi, saltNonce
+    // );
+    // const txReceipt = await txResponse.wait();// address of the newly deployed Safe
+
+
+    function addOwnerToGnosis(address owner) public {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
 
@@ -107,26 +141,24 @@ contract Ballot {
         // require(seed.calculateClaim(owner)*100 >= seed.fundingCollected()*51);
 
         require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51); //without it works fine so not problem
+        console.log("seed.calculateClaim(owner)  is %s", seed.calculateClaim(owner));
+        console.log("seed.fundingCollected() is %s", seed.fundingCollected());
+        // console.log(" seed admin is %s", address(seed.admin));
         // rkmc.setup(owner);
         console.log("addOwnerToGnosis owner is %s", owner);
         console.log("addOwnerToGnosis seed is %s", address(seed));
-        console.log("addOwnerToGnosis safe is %s", address(safe));
+        console.log("addOwnerToGnosis safe is %s", address(safe));        
+        // console.log("addOwnerToGnosis admin is %s", admin); //admin.address = chairperson.address
+        // console.log("chairperson is %s", chairperson);
 
         bytes memory data = abi.encodeWithSignature(
             "addOwnerWithThreshold(address,uint256)",
             owner,
             1
         );
-        require(safe.execTransactionFromModule(owner, 0, data, Enum.Operation.Call), "Could not execute owner adding");
-
-        // safe.connect(chairperson).execTransaction(
-        //     address(seed),
-        //     0,
-        //     data,
-        //     Enum.Operation.Call
-        // );
-
-
+        // safe.approveHash(data);
+        // require(safe.execTransactionFromModule(address(safe), 0, data, Enum.Operation.Call), "Could not execute owner adding");
+        require(safe.execTransactionFromModule(chairperson, 0, data, Enum.Operation.Call), "Could not execute owner adding");
         // rkmc.setup(owner, seed);
         // rkmc.recover();
         // seed.addOwnerThreshold(owner);
@@ -144,10 +176,9 @@ contract Ballot {
     // }
 
 //https://github.com/gnosis/safe-core-sdk/blob/main/packages/safe-core-sdk/src/managers/ownerManager.ts
-    function removeOwnerFromGnosis(address owner, address forRemOwner, GnosisSafeVV2 safe) public {
+    function removeOwnerFromGnosis(address owner, address forRemOwner) public {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
-
         //Only allow if caller has enough weight (51% and more)
         require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
 

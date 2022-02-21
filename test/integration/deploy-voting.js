@@ -311,9 +311,6 @@ describe("Contract: Voting", async () => {
       it("addOwnerToGnosis" , async () => {
         //https://github.com/gnosis/safe-contracts/blob/9311dbc0c8a33cef98d02d3ff4d65515e1f9dd6a/test/gnosisSafeExecuteFromModule.js
 
-      // Uncaught Error: Transaction reverted: function call to a non-contract account
-      // at Ballot.addOwnerToGnosis (contracts/voting/Ballot.sol:100)
-
       //NEED INITIALIZE RecoveryKeyModule --> setup on Ballot.sol:100 just NOT INITED
 
       // let moduleSetupData = await setup.proxySafe.contract.setup.getData()
@@ -325,12 +322,12 @@ describe("Contract: Voting", async () => {
       // let tx = await gnosisSafe.execTransaction(createAndAddModules.address, 0, enableModuleData, DelegateCall, 0, 0, 0, 0, 0, sigs)
 
 
-        BallotVoting.addOwnerToGnosis(setup.roles.buyer1.address, setup.proxySafe.address);//, setup.seed.address);        
+        BallotVoting.addOwnerToGnosis(buyer1.address);//, setup.proxySafe.address);//, setup.seed.address);        
       });
 
       it("removeOwnerFromGnosis" , async () => {
         // BallotVoting.delegate(setup.roles.buyer1.address);
-        BallotVoting.removeOwnerFromGnosis(admin.address, buyer1.address, setup.proxySafe.address);        
+        BallotVoting.removeOwnerFromGnosis(admin.address, buyer1.address);//, setup.proxySafe.address);        
       });
     });
 
