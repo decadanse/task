@@ -3,37 +3,38 @@ pragma solidity 0.8.9;
 
 
 import "../seed/Seed.sol"; //need this
-import "../utils/interface/Safe.sol"; // import "../test/Imports.sol";
-import "../utils/SignerV2.sol";
+// import "../utils/interface/Safe.sol"; // import "../test/Imports.sol";
+// import "../utils/SignerV2.sol";
 
+import "../gnosis/GnosisSafe.sol";
 
 // import "./SampleModule.sol";
 import "hardhat/console.sol";
 
-interface GnosisSafeVV2 is Safe{
-    /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
-    /// @param to Destination address of module transaction.
-    /// @param value Ether value of module transaction.
-    /// @param data Data payload of module transaction.
-    /// @param operation Operation type of module transaction.
-    function execTransactionFromModule(address to, uint256 value, bytes calldata data, Enum.Operation operation)
-        external
-        returns (bool success);
+// interface GnosisSafeVV2 is Safe{
+//     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
+//     /// @param to Destination address of module transaction.
+//     /// @param value Ether value of module transaction.
+//     /// @param data Data payload of module transaction.
+//     /// @param operation Operation type of module transaction.
+//     function execTransactionFromModule(address to, uint256 value, bytes calldata data, Enum.Operation operation)
+//         external
+//         returns (bool success);
 
-    function execTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        Enum.Operation operation,
-        uint256 safeTxGas
-    ) external returns (bool success);
-}
+//     function execTransaction(
+//         address to,
+//         uint256 value,
+//         bytes calldata data,
+//         Enum.Operation operation,
+//         uint256 safeTxGas
+//     ) external returns (bool success);
+// }
 
 /// @title Voting with delegation.
 contract Ballot {
     Seed public seed;
     // Safe public gnosis;
-    GnosisSafeVV2 public safe;
+    GnosisSafe public safe;
 
     // RecoveryKeyModule rkmc;
     // ILBP public lbp; // Address of LBP that is managed by this contract.
@@ -63,7 +64,7 @@ contract Ballot {
     Proposal[] public proposals;
 
     /// Create a new ballot to choose one of `proposalNames`.
-    constructor(bytes32[] memory proposalNames, Seed _seed, GnosisSafeVV2 _safe) {
+    constructor(bytes32[] memory proposalNames, Seed _seed, GnosisSafe _safe) {
         require(proposalNames.length != 0, "Proposals can not be empty");
 
         seed = _seed;
@@ -73,10 +74,14 @@ contract Ballot {
         // console.log(" seed admin is %s", seed.admin.address);
 
         chairperson = msg.sender;
-        //this seed.fundingCollected() at the begginng = 0 --> so because of that in addOwnerToGnosis
-        //error division by 0 appears
-        //need to think about which value and where voters[chairperson].weight =
-        voters[chairperson].weight = 1;//seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
+
+        // uint256 basic_weight = 1;        
+        // if (seed.fundingCollected() != 0){
+        //     basic_weight = seed.fundingCollected();
+        // }
+        // voters[chairperson].weight = basic_weight; 
+
+        voters[chairperson].weight = seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
 
         // For each of the provided proposal names,
         // create a new proposal object and add it
@@ -104,39 +109,24 @@ contract Ballot {
         require(owner != address(0));
 
         //Only allow if caller has enough weight (51% and more)
-
         require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51); //without it works fine so not problem
-        console.log("seed.calculateClaim(owner)  is %s", seed.calculateClaim(owner));
-        console.log("seed.fundingCollected() is %s", seed.fundingCollected());
-        // console.log(" seed admin is %s", address(seed.admin));
-        // rkmc.setup(owner);
-        console.log("addOwnerToGnosis owner is %s", owner);
-        console.log("addOwnerToGnosis chairperson is %s", chairperson);
-        console.log("addOwnerToGnosis seed is %s", address(seed));
-        console.log("addOwnerToGnosis safe is %s", address(safe));        
+        // console.log("seed.calculateClaim(owner)  is %s", seed.calculateClaim(owner));
+        // console.log("seed.fundingCollected() is %s", seed.fundingCollected());
+        // console.log("addOwnerToGnosis owner is %s", owner);
+        // console.log("addOwnerToGnosis chairperson is %s", chairperson);
+        // console.log("addOwnerToGnosis seed is %s", address(seed));
+        // console.log("addOwnerToGnosis safe is %s", address(safe));        
         // console.log("addOwnerToGnosis admin is %s", admin); //admin.address = chairperson.address
         // console.log("chairperson is %s", chairperson);
 
-        bytes memory data = abi.encodeWithSignature(
-            "addOwnerWithThreshold(address,uint256)",
-            owner,
-            1
-        );
-        // require(safe.execTransactionFromModule(chairperson, 0, data, Enum.Operation.Call), "Could not execute owner adding");
-        require(safe.execTransaction(address(safe), 0, data, Enum.Operation.Call, 0), "Could not execute owner adding");
-
+        address[] memory array = safe.getOwners();
+        console.log("getOwners is %s : %s \n", address(array[0]), address(array[1]));
+     
+        safe.addOwnerWithThreshold(owner, 1);
+        array = safe.getOwners();
+        // console.log("getOwners is ", array);
+        console.log("getOwners is %s : %s :%s \n", address(array[0]), address(array[1]), address(array[2]));  
     }
-
-
-    // function transfer(GnosisSafe safe, address token, address payable to, uint96 amount) private {
-    //     if (token == address(0)) {
-    //         // solium-disable-next-line security/no-send
-    //         require(safe.execTransactionFromModule(to, amount, "", Enum.Operation.Call), "Could not execute ether transfer");
-    //     } else {
-    //         bytes memory data = abi.encodeWithSignature("transfer(address,uint256)", to, amount);
-    //         require(safe.execTransactionFromModule(token, 0, data, Enum.Operation.Call), "Could not execute token transfer");
-    //     }
-    // }
 
 //https://github.com/gnosis/safe-core-sdk/blob/main/packages/safe-core-sdk/src/managers/ownerManager.ts
     function removeOwnerFromGnosis(address owner, address forRemOwner) public {
@@ -145,17 +135,30 @@ contract Ballot {
         //Only allow if caller has enough weight (51% and more)
         require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
 
-        bytes memory data = abi.encodeWithSignature(
-            "removeOwner(address,address,uint256)",
-            owner,
-            forRemOwner,
-            1
-        );
-        // require(safe.execTransaction(owner, 0, data, Enum.Operation.Call), "Could not execute owner removing");
-        // console.log();
-        // rkmc.setup(owner,seed);
-        // rkmc.setup(owner);
-        // rkmc.remover(forRemOwner);
+
+        // address[] memory array = safe.getOwners(); //part if later edit for to pass only 1 arg to removeOwnerFromGnosis
+        // uint256 previous = 0;     
+        // uint256 len = array.length;
+        // for (uint256 i = 1; i < len; i++) {
+        //     if (array[i] == forRemOwner){
+        //         previous = i - 1;
+        //     }            
+        // }
+        // address beforeForRemOwner = array[previous];
+        // console.log(previous);
+        // require(len > safe.getThreshold(), "ownerCount must be >= threshold");
+        // equire(beforeForRemOwner != forRemOwner);
+
+        // console.log("safe.getThreshold() is %s \n", safe.getThreshold());        
+        // console.log("owner is %s \n", owner);
+        // console.log("beforeForRemOwner is %s \n", beforeForRemOwner);
+        // console.log("forRemOwner is %s \n", forRemOwner);
+        // safe.removeOwner(beforeForRemOwner, forRemOwner, 1);
+
+
+        safe.removeOwner(owner, forRemOwner, 1);        
+        // array = safe.getOwners();
+        // console.log("getOwner is %s \n", address(array[previous])); 
     }
 
     // Give `voter` the right to vote on this ballot.
@@ -178,7 +181,7 @@ contract Ballot {
         require(!voters[voter].voted, "The voter already voted.");
         require(voters[voter].weight == 0);
         // Seed seed = new Seed(voter, msg.sender);
-        voters[voter].weight = 1;//seed.calculateClaim(voter); //NEED TO FIX IT
+        voters[voter].weight = 1;//seed.calculateClaim(voter);
     }
 
     /// Delegate your vote to the voter `to`.

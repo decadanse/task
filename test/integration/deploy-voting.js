@@ -191,16 +191,16 @@ describe("Contract: Voting", async () => {
     // Voting = await ethers.getContractFactory("Ballot");
     BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address, setup.proxySafe.address); 
 
-    RecoveryKeyModule = await ethers.getContractFactory(
-      "RecoveryKeyModule",
-      admin   //setup.roles.prime//root
-    );
+    // RecoveryKeyModule = await ethers.getContractFactory(
+    //   "RecoveryKeyModule",
+    //   admin   //setup.roles.prime//root
+    // );
 
   });
 
     describe(">> basic voting check", function () { //errors
         it("Checking root balance after deploy", async function () {
-            expect(await BallotVoting.checkVoterBalance(admin.address)).to.equal(1);
+            expect(await BallotVoting.checkVoterBalance(admin.address)).to.equal(0);
         });
 
         it("Attempting to add an existing candidate", async function () {
@@ -238,7 +238,7 @@ describe("Contract: Voting", async () => {
 
       it("Delegating", async () => {
         BallotVoting.connect(admin).giveRightToVote(buyer2.address);        
-        BallotVoting.connect(buyer2).vote(1);
+        BallotVoting.connect(buyer2).vote(0);
         await expect(            
           BallotVoting.connect(buyer2).delegate(buyer3.address)
         ).to.revertedWith(
@@ -275,7 +275,7 @@ describe("Contract: Voting", async () => {
         await setup.proxySafe
           .connect(admin)
           .setup(
-            [admin.address],
+            [admin.address, buyer1.address, buyer2.address],
             1,
             setup.proxySafe.address,
             "0x",
@@ -286,49 +286,17 @@ describe("Contract: Voting", async () => {
           );
       });
 
-
-    // it('should DEPLOY RecoveryKeyModule', async () => {
-    //     // const setupData = await gnosisSafeMasterCopy.setup([lw.accounts[0], lw.accounts[1]], 2, ADDRESS_0, "0x", 0, 0, 0, 0)
-    //     // const CALL = 0
-
-    //     // Find event in tx and create contract instance
-    //     // const safe = utils.getParamFromTxEvent(
-    //     //     await proxyFactory.createProxy(gnosisSafeMasterCopy.address, setup.proxySafe),
-    //     //     'ProxyCreation', 'proxy', proxyFactory.address, GnosisSafe, 'create Gnosis Safe' 
-    //     // )
-        
-    //     // Setup module
-    //     // const testModule = await RecoveryKeyModule.deploy() //HOW can I deploy RecoveryKeyModule?
-
-    //     let enableModuleData = setup.proxySafe.contract.methods.enableModule(accounts[0]).encodeABI();
-    //     await safeUtils.executeTransaction(setup.seed, setup.proxySafe, 'add owner', [setup.roles.buyer1.address]);
-    //     // const enableModuleData = await setup.proxySafe.enableModule(testModule.address).encodeABI()
-    //     // await execTransaction(setup.proxySafe.address, 0, enableModuleData, CALL, "enable module")
-    // });
-
-// // To deploy run following js (web3js 0.4.x):
-
       it("addOwnerToGnosis" , async () => {
         //https://github.com/gnosis/safe-contracts/blob/9311dbc0c8a33cef98d02d3ff4d65515e1f9dd6a/test/gnosisSafeExecuteFromModule.js
-
-      //NEED INITIALIZE RecoveryKeyModule --> setup on Ballot.sol:100 just NOT INITED
-
-      // let moduleSetupData = await setup.proxySafe.contract.setup.getData()
-      // let moduleCreationData = await setup.proxySafe.contract.createProxy.getData(recoveryModuleMasterCopy.address, moduleSetupData)
-      // // see https://github.com/gnosis/safe-contracts/blob/development/test/utils/general.js#L9
-      // let enableModuleParameterData = utils.createAndAddModulesData([moduleCreationData])
-      // let enableModuleData = createAndAddModules.contract.createAndAddModules.getData(setup.proxySafe.address, enableModuleParameterData)
-      // // generate sigs
-      // let tx = await gnosisSafe.execTransaction(createAndAddModules.address, 0, enableModuleData, DelegateCall, 0, 0, 0, 0, 0, sigs)
-
-
-        BallotVoting.addOwnerToGnosis(buyer1.address);//, setup.proxySafe.address);//, setup.seed.address);        
+        // BallotVoting.addOwnerToGnosis(buyer2.address);
+        BallotVoting.addOwnerToGnosis(buyer3.address);
       });
 
       it("removeOwnerFromGnosis" , async () => {
-        // BallotVoting.delegate(setup.roles.buyer1.address);
-        BallotVoting.removeOwnerFromGnosis(admin.address, buyer1.address);//, setup.proxySafe.address);        
+        BallotVoting.removeOwnerFromGnosis(admin.address, buyer2.address);     
       });
+
+      
     });
 
   });

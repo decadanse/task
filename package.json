@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "@balancer-labs/v2-deployments": "^2.3.0",
+    "@gnosis.pm/mock-contract": "^4.0.0",
     "@gnosis.pm/safe-contracts": "1.3.0",
     "@gnosis.pm/safe-core-sdk": "^2.0.0",
     "@openzeppelin/contracts": "4.3.3",
