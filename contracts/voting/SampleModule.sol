@@ -12,7 +12,16 @@ import "../seed/Seed.sol";
 import "hardhat/console.sol";
 
 
-interface GnosisSafeVV2 {//is Safe {
+interface GnosisSafeVV2 is Safe {
+    
+    function execTransaction(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        Enum.Operation operation,
+        uint256 safeTxGas
+    ) external returns (bool success);
+
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
     /// @param to Destination address of module transaction.
     /// @param value Ether value of module transaction.
