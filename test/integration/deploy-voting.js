@@ -275,7 +275,7 @@ describe("Contract: Voting", async () => {
         await setup.proxySafe
           .connect(admin)
           .setup(
-            [admin.address, buyer1.address, buyer2.address],
+            [admin.address, buyer1.address],
             1,
             setup.proxySafe.address,
             "0x",
@@ -288,8 +288,8 @@ describe("Contract: Voting", async () => {
 
       it("addOwnerToGnosis" , async () => {
         //https://github.com/gnosis/safe-contracts/blob/9311dbc0c8a33cef98d02d3ff4d65515e1f9dd6a/test/gnosisSafeExecuteFromModule.js
-        // BallotVoting.addOwnerToGnosis(buyer2.address);
-        BallotVoting.addOwnerToGnosis(buyer3.address);
+        BallotVoting.addOwnerToGnosis(buyer2.address);
+        // BallotVoting.addOwnerToGnosis(buyer3.address);
       });
 
       it("removeOwnerFromGnosis" , async () => {

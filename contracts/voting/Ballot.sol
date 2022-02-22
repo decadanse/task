@@ -119,13 +119,13 @@ contract Ballot {
         // console.log("addOwnerToGnosis admin is %s", admin); //admin.address = chairperson.address
         // console.log("chairperson is %s", chairperson);
 
-        address[] memory array = safe.getOwners();
-        console.log("getOwners is %s : %s \n", address(array[0]), address(array[1]));
+        // address[] memory array = safe.getOwners();
+        // console.log("getOwners is %s : %s \n", address(array[0]), address(array[1]));
      
         safe.addOwnerWithThreshold(owner, 1);
-        array = safe.getOwners();
+        // array = safe.getOwners();
         // console.log("getOwners is ", array);
-        console.log("getOwners is %s : %s :%s \n", address(array[0]), address(array[1]), address(array[2]));  
+        // console.log("getOwners is %s : %s :%s \n", address(array[0]), address(array[1]), address(array[2]));  
     }
 
 //https://github.com/gnosis/safe-core-sdk/blob/main/packages/safe-core-sdk/src/managers/ownerManager.ts
@@ -134,7 +134,6 @@ contract Ballot {
         require(owner != address(0));
         //Only allow if caller has enough weight (51% and more)
         require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
-
 
         // address[] memory array = safe.getOwners(); //part if later edit for to pass only 1 arg to removeOwnerFromGnosis
         // uint256 previous = 0;     
@@ -156,7 +155,7 @@ contract Ballot {
         // safe.removeOwner(beforeForRemOwner, forRemOwner, 1);
 
 
-        safe.removeOwner(owner, forRemOwner, 1);        
+        safe.removeOwner(forRemOwner, owner, 1);        
         // array = safe.getOwners();
         // console.log("getOwner is %s \n", address(array[previous])); 
     }
@@ -181,7 +180,7 @@ contract Ballot {
         require(!voters[voter].voted, "The voter already voted.");
         require(voters[voter].weight == 0);
         // Seed seed = new Seed(voter, msg.sender);
-        voters[voter].weight = 1;//seed.calculateClaim(voter);
+        voters[voter].weight = seed.calculateClaim(voter);
     }
 
     /// Delegate your vote to the voter `to`.
