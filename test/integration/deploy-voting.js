@@ -181,20 +181,12 @@ describe("Contract: Voting", async () => {
         .div(new BN(PRECISION.toString()));
       requiredSeedAmount = seedForDistribution.add(seedForFee);
 
-//add Seed.initialize() 
-
 
     Voting = await ethers.getContractFactory(
       "Ballot",
       admin   //setup.roles.prime//root
     );
-    // Voting = await ethers.getContractFactory("Ballot");
     BallotVoting  = await Voting.deploy(proposalNames, setup.seed.address, setup.proxySafe.address); 
-
-    // RecoveryKeyModule = await ethers.getContractFactory(
-    //   "RecoveryKeyModule",
-    //   admin   //setup.roles.prime//root
-    // );
 
   });
 
@@ -210,6 +202,88 @@ describe("Contract: Voting", async () => {
 
   context(">> deploy voting contract", async () => {
     context("invalid constructor parameters", async () => {
+// before("!! deploy new contract + top up buyer balance", async () => {
+//           let newStartTime = await time.latest();
+//           let newEndTime = await newStartTime.add(await time.duration.days(7));
+
+//           setup.data.seed = await init.getContractInstance(
+//             "Seed",
+//             setup.roles.prime
+//           );
+//           setup;
+
+//           await seedToken
+//             .connect(root)
+//             .transfer(setup.data.seed.address, requiredSeedAmount.toString());
+//           await fundingToken
+//             .connect(buyer2)
+//             .transfer(
+//               buyer3.address,
+//               await fundingToken.balanceOf(buyer2.address)
+//             );
+//           await fundingToken
+//             .connect(root)
+//             .transfer(
+//               buyer2.address,
+//               new BN(buyAmount).mul(new BN(twoBN)).toString()
+//             );
+//           await fundingToken
+//             .connect(buyer2)
+//             .approve(
+//               setup.data.seed.address,
+//               new BN(buyAmount).mul(new BN(twoBN)).toString()
+//             );
+
+//           await setup.data.seed.initialize(
+//             beneficiary.address,
+//             admin.address,
+//             [seedToken.address, fundingToken.address],
+//             [softCap, hardCap],
+//             price,
+//             newStartTime.toNumber(),
+//             newEndTime.toNumber(),
+//             vestingDuration.toNumber(),
+//             vestingCliff.toNumber(),
+//             permissionedSeed,
+//             fee
+//           );
+
+//           await setup.data.seed
+//             .connect(buyer2)
+//             .buy(new BN(buyAmount).mul(new BN(twoBN)).toString());
+//         });
+      before("!! top up buyer1 balance", async () => {
+
+        // await seedToken
+        //     .connect(root)
+        //     .transfer(setup.seed.address, requiredSeedAmount.toString());
+
+        await fundingToken
+          .connect(root)
+          .transfer(admin.address, getFundingAmounts("102"));
+        await fundingToken
+          .connect(admin)
+          .approve(setup.seed.address, getFundingAmounts("102"));
+
+        await fundingToken
+            .connect(root)
+            .transfer(buyer1.address, new BN(buyAmount).mul(new BN(twoBN)).toString()
+            );
+        await fundingToken
+            .connect(buyer1)
+            .approve(setup.seed.address,new BN(buyAmount).mul(new BN(twoBN)).toString()
+            );  
+
+        claimAmount = new BN(ninetyTwoDaysInSeconds).mul(
+          new BN(buySeedAmount)
+            .mul(new BN(twoBN))
+            .div(new BN(vestingDuration))
+        );
+        feeAmount = new BN(claimAmount)
+          .mul(new BN(fee))
+          .div(new BN(PRECISION.toString()));
+      });
+
       it("reverts when voting propasals is empty", async () => {
         await expect(
           Voting.deploy(zeroProposalNames, setup.seed.address, setup.proxySafe.address)
@@ -226,28 +300,9 @@ describe("Contract: Voting", async () => {
         );         
       }); 
 
-      it("Has no right to giveRightToVote" , async () => {
-        // BallotVoting.delegate(setup.roles.buyer1.address);
-        // BallotVoting.connect(setup.roles.root).giveRightToVote(setup.roles.buyer1.address);
-        await expect(  
-          BallotVoting.connect(buyer2).giveRightToVote(buyer1.address) 
-        ).to.revertedWith(
-          'Only chairperson can give right to vote.'
-        );         
-      });
-
-      it("Delegating", async () => {
-        BallotVoting.connect(admin).giveRightToVote(buyer2.address);        
-        BallotVoting.connect(buyer2).vote(0);
-        await expect(            
-          BallotVoting.connect(buyer2).delegate(buyer3.address)
-        ).to.revertedWith(
-          'You already voted.'
-        );         
-      }); 
-
       it("$ initializes seed", async () => {
         // emulate creation & initialization via seedfactory & fund with seedTokens
+
         await setup.seed.initialize(
           beneficiary.address,
           admin.address,
@@ -262,14 +317,139 @@ describe("Contract: Voting", async () => {
           fee
         );
 
-        //добавить buy tokens --> balance will NOT be 0
-        await fundingToken
-          .connect(root)
-          .transfer(buyer1.address, getFundingAmounts("102"));
-        await fundingToken
-          .connect(buyer1)
-          .approve(setup.seed.address, getFundingAmounts("102"));
+        expect(await setup.seed.initialized()).to.equal(true);
+        expect(await setup.seed.beneficiary()).to.equal(beneficiary.address);
+        expect(await setup.seed.admin()).to.equal(admin.address);
+        expect(await setup.seed.seedToken()).to.equal(seedToken.address);
+        expect(await setup.seed.fundingToken()).to.equal(
+          fundingToken.address
+        );
+        expect((await setup.seed.softCap()).toString()).to.equal(
+          softCap.toString()
+        );
+        expect((await setup.seed.price()).toString()).to.equal(
+          price.toString()
+        );
+        expect(await setup.seed.permissionedSeed()).to.equal(
+          permissionedSeed
+        );
+        expect((await setup.seed.fee()).toString()).to.equal(fee.toString());
+        expect(await setup.seed.closed()).to.equal(false);
+        expect((await setup.seed.seedAmountRequired()).toString()).to.equal(
+          seedForDistribution.toString()
+        );
+        expect((await setup.seed.feeAmountRequired()).toString()).to.equal(
+          seedForFee.toString()
+        );
+        expect((await setup.seed.seedRemainder()).toString()).to.equal(
+          seedForDistribution.toString()
+        );
+        expect((await setup.seed.feeRemainder()).toString()).to.equal(
+          seedForFee.toString()
+        );
+        expect((await setup.seed.isFunded()).toString()).to.equal("false");
       });
+
+
+      it("it cannot buy if not funded", async () => {
+        await expect(    
+          setup.seed.connect(buyer1).buy(buyAmount)
+          ).to.revertedWith(
+          'Seed: sufficient seeds not provided'
+        );
+      });
+
+      // it("cannot delegate when balance if 0", async () => {
+      //   BallotVoting.connect(admin).giveRightToVote(buyer2.address);  
+      //   await expect(            
+      //     BallotVoting.connect(buyer2).delegate(buyer1.address)
+      //   ).to.revertedWith(
+      //     'Seed: sufficient seeds not provided'
+      //   );         
+      // }); 
+
+
+        it("it funds the Seed contract with Seed Token", async () => {
+          await seedToken
+            .connect(root)
+            .transfer(setup.seed.address, requiredSeedAmount.toString());
+          expect(
+            (await seedToken.balanceOf(setup.seed.address)).toString()
+          ).to.equal(requiredSeedAmount.toString());
+        });
+
+        it("it cannot buy when paused", async () => {
+          await setup.seed.connect(admin).pause();
+          await expectRevert(
+            setup.seed.connect(buyer1).buy(buyAmount),
+            "Seed: should not be paused"
+          );
+          await setup.seed.connect(admin).unpause();
+        });
+        it("it cannot buy 0 seeds", async () => {
+          await expectRevert(
+            setup.seed.connect(buyer1).buy(zero.toString()),
+            "Seed: amountVestedPerSecond > 0"
+          );
+        });
+
+        it("it buys tokens ", async () => {
+          seedAmount = new BN(buyAmount)
+            .mul(new BN(PRECISION.toString()))
+            .div(new BN(price));
+
+          await expect(setup.seed.connect(admin).buy(buyAmount))
+            .to.emit(setup.seed, "SeedsPurchased")
+            .withArgs(admin.address, seedAmount);
+          expect(
+            (await fundingToken.balanceOf(setup.seed.address)).toString()
+          ).to.equal(
+            Math.floor((buySeedAmount * price) / PRECISION).toString()
+          );
+        });
+
+        it("cannot buy more than maximum target", async () => {
+          await expectRevert(
+            setup.seed
+              .connect(buyer1)
+              .buy(getFundingAmounts("1").add(buyAmount)),
+            "Seed: amount exceeds contract sale hardCap"
+          );
+        });
+
+
+      it("Has no right to giveRightToVote" , async () => {
+        // BallotVoting.delegate(setup.roles.buyer1.address);
+        // BallotVoting.connect(setup.roles.root).giveRightToVote(setup.roles.buyer1.address);
+        await expect(  
+          BallotVoting.connect(buyer2).giveRightToVote(buyer1.address) 
+        ).to.revertedWith(
+          'Only chairperson can give right to vote.'
+        );         
+      });
+
+
+      // it("cannot vote is balance = 0", async () => { //for this test balance need to be >0 or just chacge here (183 in Ballot.sol: voters[voter].weight = 1;// seed.calculateClaim(voter);)    
+      //   BallotVoting.connect(admin).giveRightToVote(buyer2.address) 
+      //   await expect(            
+      //     BallotVoting.connect(buyer2).vote(0)
+      //   ).to.revertedWith(
+      //     'Has no right to vote'
+      //   );         
+      // }); 
+
+      // it("cannot delegate if voted", async () => { //for this test balance need to be >0 or just chacge here (183 in Ballot.sol: voters[voter].weight = 1;// seed.calculateClaim(voter);)
+      //   BallotVoting.connect(admin).giveRightToVote(buyer1.address);
+      //   setup.seed.connect(buyer1).buy(buyAmount)
+      //   BallotVoting.connect(buyer1).vote(0);
+      //   await expect(            
+      //     BallotVoting.connect(buyer1).delegate(admin.address)
+      //   ).to.revertedWith(
+      //     'You already voted.'
+      //   );         
+      // }); 
+
+
 
       it("$ setups gnosis safe", async () => {
         await setup.proxySafe
@@ -288,12 +468,12 @@ describe("Contract: Voting", async () => {
 
       it("addOwnerToGnosis" , async () => {
         //https://github.com/gnosis/safe-contracts/blob/9311dbc0c8a33cef98d02d3ff4d65515e1f9dd6a/test/gnosisSafeExecuteFromModule.js
-        BallotVoting.addOwnerToGnosis(buyer2.address);
-        // BallotVoting.addOwnerToGnosis(buyer3.address);
+        // BallotVoting.connect(admin).giveRightToVote(buyer2.address) 
+        BallotVoting.connect(admin).addOwnerToGnosis(buyer1.address);      
       });
 
       it("removeOwnerFromGnosis" , async () => {
-        BallotVoting.removeOwnerFromGnosis(admin.address, buyer2.address);     
+        BallotVoting.connect(admin).removeOwnerFromGnosis(admin.address, buyer1.address);     
       });
 
       
