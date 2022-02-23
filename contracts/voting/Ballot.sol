@@ -81,7 +81,7 @@ contract Ballot {
         // }
         // voters[chairperson].weight = basic_weight; 
 
-        voters[chairperson].weight = seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
+        voters[chairperson].weight = 1;//seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
 
         // For each of the provided proposal names,
         // create a new proposal object and add it
@@ -110,8 +110,8 @@ contract Ballot {
 
         //Only allow if caller has enough weight (51% and more)
         require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51); //without it works fine so not problem
-        // console.log("seed.calculateClaim(owner)  is %s", seed.calculateClaim(owner));
-        // console.log("seed.fundingCollected() is %s", seed.fundingCollected());
+        console.log("seed.calculateClaim(owner)  is %s", seed.calculateClaim(owner));
+        console.log("seed.fundingCollected() is %s", seed.fundingCollected());
         // console.log("addOwnerToGnosis owner is %s", owner);
         // console.log("addOwnerToGnosis chairperson is %s", chairperson);
         // console.log("addOwnerToGnosis seed is %s", address(seed));
@@ -141,7 +141,8 @@ contract Ballot {
         // for (uint256 i = 1; i < len; i++) {
         //     if (array[i] == forRemOwner){
         //         previous = i - 1;
-        //     }            
+        //     }     
+        //         console.log(previous);       
         // }
         // address beforeForRemOwner = array[previous];
         // console.log(previous);
@@ -149,9 +150,9 @@ contract Ballot {
         // equire(beforeForRemOwner != forRemOwner);
 
         // console.log("safe.getThreshold() is %s \n", safe.getThreshold());        
-        // console.log("owner is %s \n", owner);
+        console.log("owner is %s \n", owner);
         // console.log("beforeForRemOwner is %s \n", beforeForRemOwner);
-        // console.log("forRemOwner is %s \n", forRemOwner);
+        console.log("forRemOwner is %s \n", forRemOwner);
         // safe.removeOwner(beforeForRemOwner, forRemOwner, 1);
 
 
@@ -179,8 +180,7 @@ contract Ballot {
         );
         require(!voters[voter].voted, "The voter already voted.");
         require(voters[voter].weight == 0);
-        // Seed seed = new Seed(voter, msg.sender);
-        voters[voter].weight = seed.calculateClaim(voter);
+        voters[voter].weight = 1;//seed.calculateClaim(voter); //uncomment 
     }
 
     /// Delegate your vote to the voter `to`.
