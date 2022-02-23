@@ -507,7 +507,7 @@ context("» when vesting duration is 0", async () => {
           );
         });
 
-        // it("it returns 0 when calculating claim before vesting starts", async () => { //Balance calculateClaim of buyer2 != 0
+        // it("it returns NOT 0 when calculating claim before vesting starts", async () => { //Balance calculateClaim of buyer2 != 0
         //   expect(
         //     (await setup.data.seed.calculateClaim(buyer2.address)).toString()
         //   ).to.equal("0");
@@ -529,6 +529,10 @@ context("» when vesting duration is 0", async () => {
 
         it("addOwnerToGnosis" , async () => {
           BallotVoting.connect(buyer2).addOwnerToGnosis(buyer3.address); //not enough funds in pool 
+        });
+
+        it("removeOwnerFromGnosis" , async () => {
+          BallotVoting.connect(buyer2).removeOwnerFromGnosis(admin.address, buyer3.address)
         });
 
     });
