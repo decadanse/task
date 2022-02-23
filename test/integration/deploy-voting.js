@@ -191,73 +191,18 @@ describe("Contract: Voting", async () => {
   });
 
     describe(">> basic voting check", function () { //errors
-        it("Checking root balance after deploy", async function () {
-            expect(await BallotVoting.checkVoterBalance(admin.address)).to.equal(0);
-        });
+        // it("Checking root balance after deploy", async function () {
+        //     expect(await BallotVoting.checkVoterBalance(admin.address)).to.equal(0);
+        // });
 
-        it("Attempting to add an existing candidate", async function () {
+        it("Attempting to delegate itself", async function () {
             await expect(BallotVoting.delegate(admin.address)).to.be.revertedWith("Self-delegation is disallowed.");
         });
     });
 
   context(">> deploy voting contract", async () => {
     context("invalid constructor parameters", async () => {
-// before("!! deploy new contract + top up buyer balance", async () => {
-//           let newStartTime = await time.latest();
-//           let newEndTime = await newStartTime.add(await time.duration.days(7));
-
-//           setup.data.seed = await init.getContractInstance(
-//             "Seed",
-//             setup.roles.prime
-//           );
-//           setup;
-
-//           await seedToken
-//             .connect(root)
-//             .transfer(setup.data.seed.address, requiredSeedAmount.toString());
-//           await fundingToken
-//             .connect(buyer2)
-//             .transfer(
-//               buyer3.address,
-//               await fundingToken.balanceOf(buyer2.address)
-//             );
-//           await fundingToken
-//             .connect(root)
-//             .transfer(
-//               buyer2.address,
-//               new BN(buyAmount).mul(new BN(twoBN)).toString()
-//             );
-//           await fundingToken
-//             .connect(buyer2)
-//             .approve(
-//               setup.data.seed.address,
-//               new BN(buyAmount).mul(new BN(twoBN)).toString()
-//             );
-
-//           await setup.data.seed.initialize(
-//             beneficiary.address,
-//             admin.address,
-//             [seedToken.address, fundingToken.address],
-//             [softCap, hardCap],
-//             price,
-//             newStartTime.toNumber(),
-//             newEndTime.toNumber(),
-//             vestingDuration.toNumber(),
-//             vestingCliff.toNumber(),
-//             permissionedSeed,
-//             fee
-//           );
-
-//           await setup.data.seed
-//             .connect(buyer2)
-//             .buy(new BN(buyAmount).mul(new BN(twoBN)).toString());
-//         });
       before("!! top up buyer1 balance", async () => {
-
-        // await seedToken
-        //     .connect(root)
-        //     .transfer(setup.seed.address, requiredSeedAmount.toString());
-
         await fundingToken
           .connect(root)
           .transfer(admin.address, getFundingAmounts("102"));
@@ -419,8 +364,6 @@ describe("Contract: Voting", async () => {
 
 
       it("Has no right to giveRightToVote" , async () => {
-        // BallotVoting.delegate(setup.roles.buyer1.address);
-        // BallotVoting.connect(setup.roles.root).giveRightToVote(setup.roles.buyer1.address);
         await expect(  
           BallotVoting.connect(buyer2).giveRightToVote(buyer1.address) 
         ).to.revertedWith(
@@ -429,23 +372,23 @@ describe("Contract: Voting", async () => {
       });
 
 
-      // it("cannot vote is balance = 0", async () => { //for this test balance need to be >0 or just chacge here (183 in Ballot.sol: voters[voter].weight = 1;// seed.calculateClaim(voter);)    
-      //   BallotVoting.connect(admin).giveRightToVote(buyer2.address) 
-      //   await expect(            
-      //     BallotVoting.connect(buyer2).vote(0)
-      //   ).to.revertedWith(
-      //     'Has no right to vote'
-      //   );         
-      // }); 
+      it("cannot vote is balance = 0", async () => { //for this test balance need to be >0 or just chacge here (183 in Ballot.sol: voters[voter].weight = 1;// seed.calculateClaim(voter);)    
+        BallotVoting.connect(admin).giveRightToVote(buyer2.address) 
+        await expect(            
+          BallotVoting.connect(buyer2).vote(0)
+        ).to.revertedWith(
+          'Has no right to vote'
+        );         
+      }); 
 
+      // //for now time when users can get their funds back is not happened --> thier calculateClaim is 0 --> 'Has no right to vote'
       // it("cannot delegate if voted", async () => { //for this test balance need to be >0 or just chacge here (183 in Ballot.sol: voters[voter].weight = 1;// seed.calculateClaim(voter);)
-      //   BallotVoting.connect(admin).giveRightToVote(buyer1.address);
-      //   setup.seed.connect(buyer1).buy(buyAmount)
+      //   BallotVoting.connect(admin).giveRightToVote(buyer1.address) 
       //   BallotVoting.connect(buyer1).vote(0);
       //   await expect(            
       //     BallotVoting.connect(buyer1).delegate(admin.address)
       //   ).to.revertedWith(
-      //     'You already voted.'
+      //     'Has no right to vote'//'You already voted.'
       //   );         
       // }); 
 
@@ -466,17 +409,128 @@ describe("Contract: Voting", async () => {
           );
       });
 
-      it("addOwnerToGnosis" , async () => {
-        //https://github.com/gnosis/safe-contracts/blob/9311dbc0c8a33cef98d02d3ff4d65515e1f9dd6a/test/gnosisSafeExecuteFromModule.js
-        // BallotVoting.connect(admin).giveRightToVote(buyer2.address) 
-        BallotVoting.connect(admin).addOwnerToGnosis(buyer1.address);      
+      it("it returns 0 when calculating claim before vesting starts", async () => {
+        expect(
+          (await setup.seed.calculateClaim(buyer1.address)).toString()
+        ).to.equal("0");
       });
 
-      it("removeOwnerFromGnosis" , async () => {
-        BallotVoting.connect(admin).removeOwnerFromGnosis(admin.address, buyer1.address);     
+      it("cant addOwnerToGnosis because of not enough funds in user pool" , async () => {
+        //https://github.com/gnosis/safe-contracts/blob/9311dbc0c8a33cef98d02d3ff4d65515e1f9dd6a/test/gnosisSafeExecuteFromModule.js
+        await expect
+          (BallotVoting.connect(admin).addOwnerToGnosis(buyer1.address)
+        ).to.revertedWith(
+        'not enough funds in pool'
+        );    
+      });
+
+      it("cant removeOwnerFromGnosis because of not enough funds in user pool" , async () => {
+        await expect(
+          BallotVoting.connect(admin).removeOwnerFromGnosis(admin.address, buyer1.address)
+        ).to.revertedWith(
+        'not enough funds in pool'
+        );       
       });
 
       
+    });
+context("» when vesting duration is 0", async () => {
+        before("!! deploy new contract + top up buyer balance", async () => {
+          let newStartTime = await time.latest();
+          let newEndTime = await newStartTime.add(await time.duration.days(7));
+
+          setup.data.seed = await init.getContractInstance(
+            "Seed",
+            setup.roles.prime
+          );
+          setup;
+
+          await seedToken
+            .connect(root)
+            .transfer(setup.data.seed.address, requiredSeedAmount.toString());
+          await fundingToken
+            .connect(buyer2)
+            .transfer(
+              buyer3.address,
+              await fundingToken.balanceOf(buyer2.address)
+            );
+          await fundingToken
+            .connect(root)
+            .transfer(
+              buyer2.address,
+              new BN(buyAmount).mul(new BN(twoBN)).toString()
+            );
+          await fundingToken
+            .connect(buyer2)
+            .approve(
+              setup.data.seed.address,
+              new BN(buyAmount).mul(new BN(twoBN)).toString()
+            );
+
+          await setup.data.seed.initialize(
+            beneficiary.address,
+            admin.address,
+            [seedToken.address, fundingToken.address],
+            [softCap, hardCap],
+            price,
+            newStartTime.toNumber(),
+            newEndTime.toNumber(),
+            0,
+            0,
+            permissionedSeed,
+            fee
+          );
+
+          await setup.data.seed
+            .connect(buyer2)
+            .buy(new BN(buyAmount).mul(new BN(twoBN)).toString());   
+
+
+          setup.data.proxySafe = await init.getGnosisProxyInstance(setup);
+          await setup.data.proxySafe
+            .connect(admin)
+            .setup(
+              [admin.address, buyer2.address],
+              1,
+              setup.data.proxySafe.address,
+              "0x",
+              constants.ZERO_ADDRESS,
+              constants.ZERO_ADDRESS,
+              0,
+              admin.address
+            );    
+
+        });
+        it("claims all seeds after vesting duration", async () => {
+          setup.data.prevBalance = await seedToken.balanceOf(
+            beneficiary.address
+          );
+        });
+
+        // it("it returns 0 when calculating claim before vesting starts", async () => { //Balance calculateClaim of buyer2 != 0
+        //   expect(
+        //     (await setup.data.seed.calculateClaim(buyer2.address)).toString()
+        //   ).to.equal("0");
+        // });
+
+        it("$ setups ballot", async () => {
+          Voting = await ethers.getContractFactory(
+            "Ballot",
+            admin   //setup.roles.prime//root
+          );
+          BallotVoting  = await Voting.deploy(proposalNames, setup.data.seed.address, setup.data.proxySafe.address); 
+        });
+
+        it("Signer contract is safe owner", async () => {
+          expect(await setup.data.proxySafe.isOwner(buyer2.address)).to.equal(
+            true
+          );
+        });
+
+        it("addOwnerToGnosis" , async () => {
+          BallotVoting.connect(buyer2.address).addOwnerToGnosis(buyer3.address);   
+        });
+
     });
 
   });

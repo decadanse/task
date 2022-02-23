@@ -75,13 +75,13 @@ contract Ballot {
 
         chairperson = msg.sender;
 
-        // uint256 basic_weight = 1;        
-        // if (seed.fundingCollected() != 0){
-        //     basic_weight = seed.fundingCollected();
-        // }
-        // voters[chairperson].weight = basic_weight; 
+        uint256 basic_weight = 1;        
+        if (seed.fundingCollected() != 0){
+            basic_weight = seed.fundingCollected();
+        }
 
-        voters[chairperson].weight = 1;//seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
+        voters[chairperson].weight = basic_weight; 
+        // voters[chairperson].weight = 1;//seed.fundingCollected(); //seed.calculateClaim(chairperson); //balanceOf(voters[chairperson]);
 
         // For each of the provided proposal names,
         // create a new proposal object and add it
@@ -99,19 +99,15 @@ contract Ballot {
         balance = voters[voter].weight;
     }
 
-    //https://github.com/gnosis/safe-core-sdk/tree/main/packages/safe-core-sdk#create-1
-    //проверка на >=51% --> вызов функции гнозис идет уже от лица владельца.
-    //т.е. юзер инициирует вызов от владельца
-    //call execTransaction with all necessary signatures and encoded transaction data for addOwnerThreshold
-
     function addOwnerToGnosis(address owner) public {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
 
         //Only allow if caller has enough weight (51% and more)
-        require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51); //without it works fine so not problem
-        console.log("seed.calculateClaim(owner)  is %s", seed.calculateClaim(owner));
-        console.log("seed.fundingCollected() is %s", seed.fundingCollected());
+        // require(seed.seedAmountForFunder(owner)/100 >= seed.fundingCollected()/100*51, "not enough funds in pool"); 
+        require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51, "not enough funds in pool"); 
+        // console.log("seed.seedAmountForFunder(owner)  is %s", seed.seedAmountForFunder(owner));
+        // console.log("seed.fundingCollected() is %s", seed.seedAmountForFunder());
         // console.log("addOwnerToGnosis owner is %s", owner);
         // console.log("addOwnerToGnosis chairperson is %s", chairperson);
         // console.log("addOwnerToGnosis seed is %s", address(seed));
@@ -119,13 +115,13 @@ contract Ballot {
         // console.log("addOwnerToGnosis admin is %s", admin); //admin.address = chairperson.address
         // console.log("chairperson is %s", chairperson);
 
-        // address[] memory array = safe.getOwners();
+        address[] memory array = safe.getOwners();
         // console.log("getOwners is %s : %s \n", address(array[0]), address(array[1]));
      
         safe.addOwnerWithThreshold(owner, 1);
         // array = safe.getOwners();
         // console.log("getOwners is ", array);
-        // console.log("getOwners is %s : %s :%s \n", address(array[0]), address(array[1]), address(array[2]));  
+        console.log("getOwners is %s : %s :%s \n", address(array[0]), address(array[1]), address(array[2]));  
     }
 
 //https://github.com/gnosis/safe-core-sdk/blob/main/packages/safe-core-sdk/src/managers/ownerManager.ts
@@ -133,30 +129,33 @@ contract Ballot {
         // Owner address cannot be null, the sentinel or the Safe itself.
         require(owner != address(0));
         //Only allow if caller has enough weight (51% and more)
-        require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51);
+        require(seed.calculateClaim(owner)/100 >= seed.fundingCollected()/100*51, "not enough funds in pool");
 
-        // address[] memory array = safe.getOwners(); //part if later edit for to pass only 1 arg to removeOwnerFromGnosis
-        // uint256 previous = 0;     
-        // uint256 len = array.length;
-        // for (uint256 i = 1; i < len; i++) {
-        //     if (array[i] == forRemOwner){
-        //         previous = i - 1;
-        //     }     
-        //         console.log(previous);       
-        // }
-        // address beforeForRemOwner = array[previous];
-        // console.log(previous);
-        // require(len > safe.getThreshold(), "ownerCount must be >= threshold");
-        // equire(beforeForRemOwner != forRemOwner);
+        address[] memory array = safe.getOwners(); //part if later edit for to pass only 1 arg to removeOwnerFromGnosis
+        uint256 previous = 0;     
+        uint256 len = array.length;
+        for (uint256 i = 1; i < len; i++) {
+            if (array[i] == forRemOwner){
+                previous = i - 1;
+            }     
+                console.log(array[i]);       
+        }
+        address beforeForRemOwner = array[previous];
+        console.log(previous);
 
-        // console.log("safe.getThreshold() is %s \n", safe.getThreshold());        
+
+        require(len > safe.getThreshold(), "ownerCount must be >= threshold");
+        require(beforeForRemOwner != forRemOwner);
+
+        console.log("safe.getThreshold() is %s \n", safe.getThreshold());        
         console.log("owner is %s \n", owner);
-        // console.log("beforeForRemOwner is %s \n", beforeForRemOwner);
+        console.log("beforeForRemOwner is %s \n", beforeForRemOwner);
         console.log("forRemOwner is %s \n", forRemOwner);
-        // safe.removeOwner(beforeForRemOwner, forRemOwner, 1);
+        safe.removeOwner(beforeForRemOwner, forRemOwner, 1);
 
 
-        safe.removeOwner(forRemOwner, owner, 1);        
+        // safe.removeOwner(forRemOwner, owner, 1);  
+
         // array = safe.getOwners();
         // console.log("getOwner is %s \n", address(array[previous])); 
     }
@@ -180,7 +179,7 @@ contract Ballot {
         );
         require(!voters[voter].voted, "The voter already voted.");
         require(voters[voter].weight == 0);
-        voters[voter].weight = 1;//seed.calculateClaim(voter); //uncomment 
+        voters[voter].weight = seed.calculateClaim(voter); //uncomment 
     }
 
     /// Delegate your vote to the voter `to`.
@@ -226,6 +225,9 @@ contract Ballot {
     /// to proposal `proposals[proposal].name`.
     function vote(uint256 proposal) public {
         Voter storage sender = voters[msg.sender];
+
+        //sender.weight = seed.calculateClaim(msg.sender); //upd balance info
+
         require(sender.weight != 0, "Has no right to vote");
         require(!sender.voted, "Already voted.");
         sender.voted = true;
