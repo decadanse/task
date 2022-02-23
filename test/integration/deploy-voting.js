@@ -528,7 +528,7 @@ context("» when vesting duration is 0", async () => {
         });
 
         it("addOwnerToGnosis" , async () => {
-          BallotVoting.connect(buyer2.address).addOwnerToGnosis(buyer3.address);   
+          BallotVoting.connect(buyer2).addOwnerToGnosis(buyer3.address); //not enough funds in pool 
         });
 
     });
